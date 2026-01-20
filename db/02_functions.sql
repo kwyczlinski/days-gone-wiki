@@ -51,70 +51,70 @@ $$;
 -- Posiada również ograniczenie ilości wyników do przystępnej liczby, dzięki czemu odpowiedź nie odbiega za bardzo od pytania.
 -- Działa również w taki sposób aby nie było duplikatów, wynikających z np. camp.camp_name i camp.description.
 -- Bardzo przydatna funkcja dla wiki, chociaż wyszukiwanie implementuje się na pewno w inny sposób.
-create or replace function search(key varchar(64)) returns table(name text, category text)
+create or replace function search(key varchar(64)) returns table(name text, category text, id int)
   language sql
   as $$
    
-  select name, category 
+  select name, category, id 
     from (
-      select distinct on (name, category) name, category, weight 
+      select distinct on (name, category, id) name, category, id, weight 
         from (
-  	  (select mission_name as name, 'mission' as category, 2 as weight 
+  	  (select mission_name as name, 'mission' as category, id_mission as id, 2 as weight 
       	    from mission 
       	    where lower(mission_name) like lower('%'||key||'%') 
     	    limit 3)
 	  union all
-	  (select horde_name as name, 'horde' as category, 2 as weight 
+	  (select horde_name as name, 'horde' as category, id_horde as id, 2 as weight 
     	    from horde 
     	    where lower(horde_name) like lower('%'||key||'%') 
     	    limit 3)
   	  union all
-  	  (select infestation_name as name, 'infestation' as category, 1 as weight 
+  	  (select infestation_name as name, 'infestation' as category, id_infestation as id, 1 as weight 
     	    from infestation 
     	    where lower(infestation_name) like lower('%'||key||'%') 
     	    limit 3)
   	  union all
-  	  (select item as name, 'shop' as category, 3 as weight 
+  	  (select item as name, 'merchant' as category, id_merchant as id, 3 as weight 
     	    from merchant 
     	    where lower(item) like lower('%'||key||'%')
     	    limit 3)
   	  union all
-  	  (select upgrade as name, 'mechanic' as category, 3 as weight 
+  	  (select upgrade as name, 'mechanic' as category, id_mechanic as id, 3 as weight 
    	    from mechanic 
   	    where lower(upgrade) like lower('%'||key||'%') 
   	    limit 3)
   	  union all
-  	  (select camp_name as name, 'camp' as category, 1 as weight 
+  	  (select camp_name as name, 'camp' as category, id_camp as id, 1 as weight 
   	    from camp 
   	    where lower(camp_name) like lower('%'||key||'%') 
   	    limit 3)
   	  union all
-  	  (select collectible_name as name, 'collectible' as category, 4 as weight 
+  	  (select collectible_name as name, 'collectible' as category, id_collectible as id, 4 as weight 
   	    from collectibles 
   	    where lower(collectible_name) like lower('%'||key||'%') 
   	    limit 3)
   	  union all
-  	  (select mission_name as name, 'mission' as category, 10 as weight 
+  	  (select mission_name as name, 'mission' as category, id_mission as id, 10 as weight 
   	    from mission 
   	    where lower(description) like lower('%'||key||'%') 
   	    limit 10)
   	  union all
-  	  (select collectible_name as name, 'collectible' as category, 10 as weight 
+  	  (select collectible_name as name, 'collectible' as category, id_collectible as id, 10 as weight 
   	    from collectibles 
   	    where lower(description) like lower('%'||key||'%') 
   	    limit 10)
   	  union all
-  	  (select upgrade as name, 'mechanic' as category, 10 as weight 
+  	  (select upgrade as name, 'mechanic' as category, id_mechanic as id, 10 as weight 
   	    from mechanic 
   	    where lower(description) like lower('%'||key||'%') 
   	    limit 10)
   	  union all
-  	  (select camp_name as name, 'camp' as category, 15 as weight 
+  	  (select camp_name as name, 'camp' as category, id_camp as id, 15 as weight 
   	    from camp 
   	    where lower(description) like lower('%'||key||'%') 
   	    limit 6)
         ) as all_results
-        order by name, category, weight
+        order by name, category, id, weight
       ) as disinct_results
       order by weight asc
       limit 10

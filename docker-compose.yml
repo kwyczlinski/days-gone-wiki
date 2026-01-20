@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: wiki-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./db:/docker-entrypoint-initdb.d
+    networks:
+      - wiki-network
+
+  backend:
+    build: ./backend
+    container_name: wiki-api
+    env_file: .env
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=db
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+    networks:
+      - wiki-network
+
+  frontend:
+    build: ./frontend
+    container_name: wiki-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000
+    stdin_open: true
+    tty: true
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - wiki-network
+
+networks:
+  wiki-network:
+    driver: bridge
