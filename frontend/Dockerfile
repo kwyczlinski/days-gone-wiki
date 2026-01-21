@@ -1,7 +1,7 @@
-FROM node:20
+FROM node:20-alpine
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package*.json node_modules ./
 RUN npm install
 COPY . .
-ENV CI=true 
-CMD ["npm", "start"]
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host"]

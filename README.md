@@ -1,13 +1,22 @@
-# This app uses docker to start PlpgSQL, Flask and react servers
+# Days Gone Wiki Project
 
-## Created by Krzysztof Wyczlinski
+## By Krzysztof Wyczlinski
 
-## as a final project for class Protokoły Sieci Web
+## final project for class Protokoły Sieci Web
 
-#### Personal projects were used
+### Frontend
 
-PLpgSQL taken from Database class
+- **Framework:** React 19 (Vite)
+- **Compiler:** @vitejs/plugin-react (Babel-based)
+- **Routing:** React Router DOM v6
+- **Styling:** CSS Modules
 
-#### and publicly accessible templates
+### Backend
 
-[Create React App](https://github.com/facebook/create-react-app).
+- **Server:** Flask
+- **Database:** PostgreSQL
+- **Containerization:** Docker & Docker Compose
+
+### Personal projects were used and publicly accessible templates
+
+- **PLpgSQL:** taken from Database class
