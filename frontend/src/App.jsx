@@ -1,6 +1,9 @@
 import "./App.css";
 import { Navbar } from "./components/navbar";
 import { Routes, Route, useParams } from "react-router";
+import { UserProvider } from "./contexts/UserContext";
+import { LoginPage } from "./pages/auth/LoginPage";
+import { RegisterPage } from "./pages/auth/RegisterPage";
 
 const Home = () => {
   return <Navbar />;
@@ -24,10 +27,15 @@ const Page = () => {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/:category/:id" element={<Page />} />
-    </Routes>
+    <UserProvider>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/:category/:id" element={<Page />} />
+        <Route path="*" element={<Home></Home>} />
+      </Routes>
+    </UserProvider>
   );
 }
 
