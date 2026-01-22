@@ -33,7 +33,7 @@ services:
     platform: linux/amd64
     container_name: wiki-ui
     ports:
-      - "3000:5173"
+      - "5173:5173"
     environment:
       - VITE_API_URL=http://localhost:5000
     stdin_open: true

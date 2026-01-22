@@ -1,21 +1,22 @@
 import { useEffect } from "react";
-import { useUserCtx } from "@/contexts/UserContext";
-import { redirect } from "react-router-dom";
+import { useUserCtx } from "../../contexts/UserContext";
+import { useNavigate, Navigate } from "react-router-dom";
 
 export function GuestGuard({ children }) {
   const { session_token, isLoading, clearUser } = useUserCtx();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (isLoading) return;
 
-    const session_valid = true;
+    const session_valid = false;
     // #TMP ADD API & DB SESSION VALIDATION
     if (session_valid) {
-      throw redirect("/");
+      navigate("/");
     } else {
       clearUser();
     }
-  }, [session_token, isLoading]);
+  }, [session_token, isLoading, navigate, clearUser]);
 
   if (isLoading) {
     return (
@@ -26,5 +27,9 @@ export function GuestGuard({ children }) {
     );
   }
 
-  return !session_token ? <>{children}</> : null;
+  if (session_token) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
 }

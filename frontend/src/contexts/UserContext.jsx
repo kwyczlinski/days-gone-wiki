@@ -1,7 +1,11 @@
-"use client";
-
-import { createContext, useState, use, useEffect } from "react";
-import { db } from "@/lib/db";
+import {
+  createContext,
+  useState,
+  use,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 
 function setSessionToken(session_token, days = 1) {
   const expires = new Date(Date.now() + days * 864e5).toUTCString();
@@ -43,51 +47,41 @@ export function UserProvider({ children }) {
         deleteSessionToken();
         setUserData({ session_token: null, userId: null });
       }
-    } else {
-      setUserData({ session_token: null, userId: null });
     }
 
     setIsLoading(false);
   }, []);
 
-  const setUser = (data) => {
+  const setUser = useCallback((data) => {
     setUserData(data);
     if (data.session_token) {
       setSessionToken(data.session_token);
     } else {
       deleteSessionToken();
     }
-  };
+  }, []);
 
-  const clearUser = () => {
+  const clearUser = useCallback(() => {
     const session_token = getSessionToken();
-    if (session_token) db.removeSession(session_token);
+    if (session_token) {
+    }
+    // #TMP REMOVE TOKEN BY DB
     deleteSessionToken();
     setUserData({ session_token: null, userId: null });
-  };
+  }, []);
 
-  const logout = () => {
-    const session_token = getSessionToken();
-    if (session_token) db.removeSession(session_token);
-
-    deleteSessionToken();
-    setUserData({ session_token: null, userId: null });
-  };
-
-  return (
-    <UserContext.Provider
-      value={{
-        session_token: user.session_token,
-        userId: user.userId,
-        isLoading,
-        setUser,
-        logout,
-        clearUser,
-      }}
-    >
-      {children}
-    </UserContext.Provider>
+  const value = useMemo(
+    () => ({
+      session_token: user.session_token,
+      userId: user.userId,
+      isLoading,
+      setUser,
+      clearUser,
+    }),
+    [user, isLoading, setUser, clearUser]
   );
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
 export function useUserCtx() {
