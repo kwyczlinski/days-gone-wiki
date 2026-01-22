@@ -5,9 +5,13 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 from dotenv import load_dotenv
+from logging.config import dictConfig
 import os
 
+from config import setup_logging
+
 load_dotenv()
+dictConfig(setup_logging())
 
 app = Flask(__name__)
 CORS(app)
@@ -29,7 +33,7 @@ def search():
     if not search_query:
         return jsonify({"error": "No search query provided"}), 400
 
-    print(f"Searching for: {search_query}")
+    app.logger.info(f"Searching for: {search_query}")
 
     try:
         conn = get_db_conn()
@@ -44,7 +48,7 @@ def search():
         return jsonify(results), 200
 
     except Exception as err:
-        print(f"Database error: {err}")
+        app.logger.error(f"Search failed: {str(err)}")
         return jsonify({"error": str(err)}), 500
 
 if __name__ == '__main__':

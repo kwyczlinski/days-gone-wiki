@@ -25,6 +25,8 @@ services:
       - db
     volumes:
       - ./backend:/app
+      - ./backend/logs:/app/logs
+      - /app/__pycache__
     networks:
       - wiki-network
 

@@ -21,6 +21,7 @@ export const Search = () => {
               {
                 name: "No results found",
                 category: "Try searching something else",
+                id: "empty",
                 noClick: true,
               },
             ])
@@ -31,6 +32,7 @@ export const Search = () => {
           {
             name: "Please try again later",
             category: err.message,
+            id: "error",
             error: true,
             noClick: true,
           },
