@@ -197,7 +197,7 @@ create trigger unused_reward after delete on mission
 create or replace function get_collectible_page(p_id_collectible int)
 returns table(
     collectible_id int,
-    collectible_name varchar,
+    name varchar,
     description text,
     region_name varchar,
     region_id int
@@ -206,10 +206,10 @@ language sql
 as $$
   select 
   c.id_collectible,
-    c.collectible_name, 
+    c.collectible_name as name, 
     c.description, 
     r.region_name, 
-    r.id_region
+    r.id_region as region_id
   from collectible c 
   join region r on c.region = r.id_region
   where c.id_collectible = p_id_collectible;
