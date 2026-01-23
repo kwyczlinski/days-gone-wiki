@@ -53,9 +53,15 @@ def search():
         app.logger.error(f"Search failed: {str(err)}")
         return jsonify({"error": str(err)}), 500
 
-
 db_page_queries = {
+    'region': "select * from get_region_page(%s)",
+    'camp': "select * from get_camp_page(%s)",
+    'mechanic': "select * from get_mechanic_page(%s)",
+    'merchant': "select * from get_merchant_page(%s)",
     'collectible': "select * from get_collectible_page(%s)",
+    'horde': "select * from get_horde_page(%s)",
+    'infestation': "select * from get_infestation_page(%s)",
+    'mission': "select * from get_mission_page(%s)",
 }
 
 @app.get("/<category>/<int:item_id>")
