@@ -6,7 +6,7 @@ drop table if exists mission;
 drop table if exists infestation;
 drop table if exists horde;
 drop table if exists reward;
-drop table if exists collectibles;
+drop table if exists collectible;
 drop table if exists merchant;
 drop table if exists mechanic;
 drop table if exists camp;
@@ -46,7 +46,7 @@ description text
 );
 
 -- world activities
-create table collectibles (
+create table collectible (
 id_collectible serial primary key,
 region int not null references region(id_region) check (region between 1 and 6),
 collectible_name varchar(64) not null,
@@ -264,7 +264,7 @@ insert into mechanic (camp, upgrade, price, trust, description) values
 (4, 'Shroud II', 150, 2, 'Slightly increases the durability.');
 
 -- Collectibles
-insert into collectibles(region, collectible_name, description) values
+insert into collectible(region, collectible_name, description) values
 (1, 'Old Pioneer Cemetery Brochure', 'At Old Pioneer Cemetery, on a stone wall, just behind the opened cemetery gate.'),
 (2, 'Hungry Jim''s Menu', 'In the town of Marion Forks, on a table in the diner.'),
 (2, 'Marion Forks Bumper Stickers', 'In the town of Marion Forks, in the business west of the church, in an office, on a desk.'),
