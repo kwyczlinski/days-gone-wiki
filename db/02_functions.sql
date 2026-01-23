@@ -50,7 +50,6 @@ $$;
 -- Służy do przeszukiwania bazy danych po nazwach i opisach wybranych elementów, posiada system wag, który mógłby zależeć od zmiennych w zależności od kontekstu.
 -- Posiada również ograniczenie ilości wyników do przystępnej liczby, dzięki czemu odpowiedź nie odbiega za bardzo od pytania.
 -- Działa również w taki sposób aby nie było duplikatów, wynikających z np. camp.camp_name i camp.description.
--- Bardzo przydatna funkcja dla wiki, chociaż wyszukiwanie implementuje się na pewno w inny sposób.
 create or replace function search(key varchar(64)) returns table(name text, category text, id int)
   language sql
   as $$
@@ -90,7 +89,7 @@ create or replace function search(key varchar(64)) returns table(name text, cate
   	    limit 3)
   	  union all
   	  (select collectible_name as name, 'collectible' as category, id_collectible as id, 4 as weight 
-  	    from collectibles 
+  	    from collectible 
   	    where lower(collectible_name) like lower('%'||key||'%') 
   	    limit 3)
   	  union all
@@ -100,7 +99,7 @@ create or replace function search(key varchar(64)) returns table(name text, cate
   	    limit 10)
   	  union all
   	  (select collectible_name as name, 'collectible' as category, id_collectible as id, 10 as weight 
-  	    from collectibles 
+  	    from collectible
   	    where lower(description) like lower('%'||key||'%') 
   	    limit 10)
   	  union all
@@ -193,3 +192,25 @@ create trigger unused_reward after delete on mission
 -- insert into mission_order(previous_mission, next_mission) values(39,41);
 -- 6. Usunięcie misji dowolnym przykładem z wyzwalaczy
 -- 7. Sprawdzenie, że zarówno misja została usunięta poprawnie, jak i wiersz z tabeli reward z pkt. 1 oraz wiersz z tabeli mission_order z pkt. 5
+
+-- Służy do pobierania strony wiki dla znajdźki
+create or replace function get_collectible_page(p_id_collectible int)
+returns table(
+    collectible_id int,
+    collectible_name varchar,
+    description text,
+    region_name varchar,
+    region_id int
+) 
+language sql 
+as $$
+  select 
+  c.id_collectible,
+    c.collectible_name, 
+    c.description, 
+    r.region_name, 
+    r.id_region
+  from collectible c 
+  join region r on c.region = r.id_region
+  where c.id_collectible = p_id_collectible;
+$$;
