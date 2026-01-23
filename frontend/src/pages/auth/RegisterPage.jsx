@@ -4,6 +4,13 @@ import * as yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
 
 const schema = yup.object({
+  nickname: yup
+    .string()
+    .matches(
+      /^[!@#$%^&*(),.?":{}|<>]/,
+      "Nickname can not contain special characters"
+    )
+    .required("Nickname is required"),
   email: yup.string().email("Invalid email").required("Email is required"),
   password: yup
     .string()
@@ -55,8 +62,12 @@ export const RegisterPage = () => {
       <form onSubmit={handleSubmit(onSubmit)}>
         <h2>Create Account</h2>
 
+        <label>Nickname</label>
+        <input {...register("nickname")} autoFocus />
+        <p>{errors.nickname.message}</p>
+
         <label>Email</label>
-        <input {...register("email")} autoFocus />
+        <input {...register("email")} />
         <p>{errors.email?.message}</p>
 
         <label>Password</label>
@@ -68,7 +79,7 @@ export const RegisterPage = () => {
         <p>{errors.confirmPassword?.message}</p>
 
         <div>
-          <button>Complete</button>
+          <button type="submit">Complete</button>
         </div>
 
         <Link to="/login">Already have an account? Log in</Link>
