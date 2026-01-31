@@ -14,7 +14,7 @@ load_dotenv()
 dictConfig(setup_logging())
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 
 def get_db_conn():
     conn = psycopg2.connect(
@@ -25,30 +25,6 @@ def get_db_conn():
         port=os.getenv('DB_PORT')
     )
     return conn
-
-def is_email_used(email: str):
-    if not email or not isinstance(email, str):
-        app.logger.error("Tried to verify invalid email")
-        raise Exception("No email given or wrong format")
-    
-    try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-
-        cur.execute("SELECT * FROM is_email_used(%s)", (email,))
-        result = cur.fetchone()
-
-        cur.close()
-        conn.close()
-        
-        if not result:
-            return jsonify({"error": "Not found"}), 404
-
-        return jsonify(result), 200
-
-    except Exception as err:
-        app.logger.error(f"Verify email failed: {str(err)}")
-        return jsonify({"error": str(err)}), 500
 
 @app.get("/search") #(/search?query=camp)
 def search():
@@ -108,7 +84,7 @@ def getDetails(category, item_id):
         
         cur.close()
         conn.close()
-
+        
         if not result:
             return jsonify({"error": "Not found"}), 404
 
@@ -140,10 +116,10 @@ def register():
         cur.close()
         conn.close()
         
-        if result == True:
+        if result.get('is_email_used') == True: # type: ignore
             return jsonify({"error": "Email is already used"}), 400
 
-        if result != False:
+        if result.get('is_email_used') != False: # type: ignore
             return jsonify({"error": "Database connection failed"}), 500
 
     except Exception as err:
@@ -157,16 +133,14 @@ def register():
         conn = get_db_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
             
-        cur.execute("select * from register_user(%s)", (username, email, password,))
-        result = cur.fetchone()
+        cur.execute("call register_user(%s, %s, %s)", (username, email, password))
+        
+        conn.commit()
         
         cur.close()
         conn.close()
 
-        if result != True:
-            return jsonify({"error": "Failed to register"}), 500
-
-        return jsonify(result), 200
+        return jsonify({"message": "Created account successfully"}), 200
 
     except Exception as err:
         app.logger.error(f"Registration failed: {str(err)}")
