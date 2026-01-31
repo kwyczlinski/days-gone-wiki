@@ -26,6 +26,30 @@ def get_db_conn():
     )
     return conn
 
+def is_email_used(email: str):
+    if not email or not isinstance(email, str):
+        app.logger.error("Tried to verify invalid email")
+        raise Exception("No email given or wrong format")
+    
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute("SELECT * FROM is_email_used(%s)", (email,))
+        result = cur.fetchone()
+
+        cur.close()
+        conn.close()
+        
+        if not result:
+            return jsonify({"error": "Not found"}), 404
+
+        return jsonify(result), 200
+
+    except Exception as err:
+        app.logger.error(f"Verify email failed: {str(err)}")
+        return jsonify({"error": str(err)}), 500
+
 @app.get("/search") #(/search?query=camp)
 def search():
     search_query = request.args.get('query')
@@ -91,9 +115,62 @@ def getDetails(category, item_id):
         return jsonify(result), 200
 
     except Exception as err:
-        app.logger.error(f"Search failed: {str(err)}")
+        app.logger.error(f"getDetails failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.post("/register")
+def register():
+    data: dict[str, str] = request.json
+    if not (data and isinstance(data, dict) and data.get("email") and isinstance(data.get("email"), str) and data.get("username") and isinstance(data.get("username"), str) and data.get("password") and isinstance(data.get("password"), str)):
+        app.logger.error("Bad registration request data")
+        return jsonify({"error": "Bad registration data"}), 400
+    
+    email = data.get("email", "").strip()
+    username = data.get("username", "").strip()
+    password = data.get("password", "").strip()
+
+    # verifying email is free in db
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        cur.execute("SELECT * FROM is_email_used(%s)", (email,))
+        result = cur.fetchone()
+
+        cur.close()
+        conn.close()
+        
+        if result == True:
+            return jsonify({"error": "Email is already used"}), 400
+
+        if result != False:
+            return jsonify({"error": "Database connection failed"}), 500
+
+    except Exception as err:
+        app.logger.error(f"Email verification failed with: {str(err)}")
+        return jsonify({"error": "Email verification failed"}), 500
+    
+    app.logger.info(f"Creating a account for {username} with email: {email}")
+
+    # creating user account
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+        cur.execute("select * from register_user(%s)", (username, email, password,))
+        result = cur.fetchone()
+        
+        cur.close()
+        conn.close()
+
+        if result != True:
+            return jsonify({"error": "Failed to register"}), 500
+
+        return jsonify(result), 200
+
+    except Exception as err:
+        app.logger.error(f"Registration failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == '__main__':
     # host='0.0.0.0' is protocol setting for Docker
