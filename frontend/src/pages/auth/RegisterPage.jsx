@@ -2,19 +2,28 @@ import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 const schema = yup.object({
-  nickname: yup
+  username: yup
     .string()
     .matches(
-      /^[!@#$%^&*(),.?":{}|<>]/,
-      "Nickname can not contain special characters"
+      /^[a-zA-Z0-9]*$/,
+      "Username can not contain any special characters"
     )
-    .required("Nickname is required"),
-  email: yup.string().email("Invalid email").required("Email is required"),
+    .max(16, "Username can not exceed 16 chracters")
+    .required("Username is required"),
+  email: yup
+    .string()
+    .email("Invalid email")
+    .max(256, "Email can not exceed 256 characters")
+    .required("Email is required"),
   password: yup
     .string()
     .min(8, "Password must be at least 8 characters")
+    .max(256, "Password can not exceed 256 characters")
     .matches(/[a-z]/, "Passowrd must contain at least one lower letter")
     .matches(/[A-Z]/, "Passowrd must contain at least one capital letter")
     .matches(/[0-9]/, "Password must contain at least one number")
@@ -43,17 +52,29 @@ export const RegisterPage = () => {
   });
 
   const onSubmit = async (data) => {
-    const isEmailUsed = false;
-    // #TMP ADD VERIFY EMAIL IN API & DB
-    if (isEmailUsed) {
-      setError("email", { type: "manual", message: "Email is already used" });
-      return;
-    }
     try {
-      // #TMP ADD API & DB CREATE ACCOUNT
+      const res = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (result.error && result.error.includes("Email")) {
+          setError("email", {
+            type: "manual",
+            message: "Email is already used",
+          });
+        }
+        throw new Error(result.error || "Registration failed");
+      }
+
+      toast.success("Registered successfully");
       navigate("/login");
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      toast.error(err.message);
     }
   };
 
@@ -62,12 +83,12 @@ export const RegisterPage = () => {
       <form onSubmit={handleSubmit(onSubmit)}>
         <h2>Create Account</h2>
 
-        <label>Nickname</label>
-        <input {...register("nickname")} autoFocus />
-        <p>{errors.nickname.message}</p>
+        <label>Username</label>
+        <input {...register("username")} autoFocus type="text" />
+        <p>{errors.username?.message}</p>
 
         <label>Email</label>
-        <input {...register("email")} />
+        <input {...register("email")} type="email" />
         <p>{errors.email?.message}</p>
 
         <label>Password</label>
