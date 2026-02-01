@@ -161,8 +161,6 @@ def login():
                 "exp": datetime.now(timezone.utc) + timedelta(hours=24)
             }, app.config["JWT_KEY"], algorithm="HS256")
 
-            app.logger.info(f"password_db_hash is {password_db_hash}")
-
             response = make_response(jsonify({
                 "username": user["username"],
                 "user_id": user["id_user"]
