@@ -215,6 +215,7 @@ as $$
   where c.id_collectible = p_id_collectible;
 $$;
 
+-- Służy do pobierania strony wiki dla stref zarażenia
 create or replace function get_infestation_page(p_id_infestation int)
 returns table(
     infestation_id int,
@@ -248,7 +249,7 @@ as $$
   where i.id_infestation = p_id_infestation;
 $$;
 
---     "horde": "select * from get_horde_page(%s)",
+-- Służy do pobierania strony wiki dla hord
 create or replace function get_horde_page(p_id_horde int)
 returns table(
     horde_id int,
@@ -280,4 +281,42 @@ as $$
   join camp c on h.camp = c.id_camp
   join reward e on h.reward = e.id_reward
   where h.id_horde = p_id_horde;
+$$;
+
+-- Służy do pobierania strony wiki dla misji
+create or replace function get_mission_page(p_id_mission int)
+returns table(
+    mission_id int,
+    name varchar,
+    description text,
+    main boolean,
+    start_time time,
+    region_name varchar,
+    region_id int,
+    camp_name varchar,
+    camp_id varchar,
+    xp int,
+    trust int,
+    credits int
+)
+language sql 
+as $$
+  select 
+    m.id_mission,
+    m.mission_name as name, 
+    m.description,
+    m.main,
+    m.start_time,
+    r.region_name, 
+    r.id_region as region_id,
+    c.camp_name,
+    c.id_camp as camp_id,
+    e.xp int,
+    e.trust int,
+    e.credits int
+  from mission m
+  join region r on m.region = r.id_region
+  join camp c on m.camp = c.id_camp
+  join reward e on m.reward = e.id_reward
+  where m.id_mission = p_id_mission;
 $$;
