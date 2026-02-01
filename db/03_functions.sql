@@ -205,7 +205,7 @@ returns table(
 language sql 
 as $$
   select 
-  c.id_collectible,
+    c.id_collectible,
     c.collectible_name as name, 
     c.description, 
     r.region_name, 
@@ -290,7 +290,7 @@ returns table(
     name varchar,
     description text,
     main boolean,
-    start_time time,
+    start_time text,
     region_name varchar,
     region_id int,
     camp_name varchar,
@@ -306,7 +306,7 @@ as $$
     m.mission_name as name, 
     m.description,
     m.main,
-    m.start_time,
+    m.start_time::text,
     r.region_name, 
     r.id_region as region_id,
     c.camp_name,
@@ -316,7 +316,33 @@ as $$
     e.credits int
   from mission m
   join region r on m.region = r.id_region
-  join camp c on m.camp = c.id_camp
-  join reward e on m.reward = e.id_reward
+  left join camp c on m.camp = c.id_camp
+  left join reward e on m.reward = e.id_reward
   where m.id_mission = p_id_mission;
+$$;
+
+-- Służy do pobierania strony wiki dla obozu
+create or replace function get_camp_page(p_id_camp int)
+returns table(
+    collectible_id int,
+    name varchar,
+    description text,
+    region_name varchar,
+    region_id int,
+    has_merchant boolean,
+    has_mechanic boolean
+) 
+language sql 
+as $$
+  select 
+    c.id_camp,
+    c.camp_name as name, 
+    c.description, 
+    r.region_name, 
+    r.id_region as region_id,
+    exists(select 1 from merchant s where s.camp = c.id_camp) as has_merchant,
+    exists(select 1 from mechanic m where m.camp = c.id_camp) as has_mechanic
+  from camp c 
+  join region r on c.region = r.id_region
+  where c.id_camp = p_id_camp;
 $$;
