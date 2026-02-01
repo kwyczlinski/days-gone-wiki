@@ -214,3 +214,36 @@ as $$
   join region r on c.region = r.id_region
   where c.id_collectible = p_id_collectible;
 $$;
+
+create or replace function get_infestation_page(p_id_infestation int)
+returns table(
+    infestation_id int,
+    name varchar,
+    nr_nests int,
+    region_name varchar,
+    region_id int,
+    camp_name varchar,
+    camp_id varchar,
+    xp int,
+    trust int,
+    credits int
+)
+language sql 
+as $$
+  select 
+    i.id_infestation,
+    i.infestation_name as name, 
+    i.nr_nests,
+    r.region_name, 
+    r.id_region as region_id,
+    c.camp_name,
+    c.id_camp as camp_id,
+    e.xp int,
+    e.trust int,
+    e.credits int
+  from infestation i
+  join region r on i.region = r.id_region
+  join camp c on i.camp = c.id_camp
+  join reward e on i.reward = e.id_reward
+  where i.id_infestation = p_id_infestation;
+$$;
