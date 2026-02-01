@@ -3,6 +3,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { hashPassword } from "../../lib/auth";
+import { GuestGuard } from "../../components/guard/GuestGuard";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -51,12 +53,18 @@ export const RegisterPage = () => {
     mode: "onBlur",
   });
 
-  const onSubmit = async (data) => {
+  const onSubmit = async ({ username, email, password }) => {
+    const clientHashedPassword = await hashPassword(password);
+
     try {
       const res = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          username,
+          email,
+          password: clientHashedPassword,
+        }),
       });
 
       const result = await res.json();
@@ -79,17 +87,17 @@ export const RegisterPage = () => {
   };
 
   return (
-    <div>
+    <GuestGuard>
       <form onSubmit={handleSubmit(onSubmit)}>
         <h2>Create Account</h2>
 
-        <label>Username</label>
-        <input {...register("username")} autoFocus type="text" />
-        <p>{errors.username?.message}</p>
-
         <label>Email</label>
-        <input {...register("email")} type="email" />
+        <input {...register("email")} autoFocus type="text" />
         <p>{errors.email?.message}</p>
+
+        <label>Username</label>
+        <input {...register("username")} type="text" />
+        <p>{errors.username?.message}</p>
 
         <label>Password</label>
         <input {...register("password")} type="password" />
@@ -105,6 +113,6 @@ export const RegisterPage = () => {
 
         <Link to="/login">Already have an account? Log in</Link>
       </form>
-    </div>
+    </GuestGuard>
   );
 };

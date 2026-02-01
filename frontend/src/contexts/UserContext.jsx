@@ -7,73 +7,47 @@ import {
   useCallback,
 } from "react";
 
-function setSessionToken(session_token, days = 1) {
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `session_token=${session_token}; expires=${expires}; path=/`;
-}
+const API_URL = import.meta.env.VITE_API_URL;
 
-function getSessionToken() {
-  return (
-    document.cookie
-      .split("; ")
-      .find((str) => str.startsWith("session_token="))
-      ?.split("=")[1] || null
-  );
-}
-
-function deleteSessionToken() {
-  document.cookie = `session_token=; Max-Age=0; path=/`;
-}
-
-const UserContext = createContext(null);
+const UserContext = createContext({ userId: null, username: null });
 
 export function UserProvider({ children }) {
-  const [user, setUserData] = useState({
-    session_token: null,
-    userId: null,
-  });
-
+  const [user, setUserData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    let savedToken = getSessionToken();
-
-    if (savedToken) {
-      const userId = null;
-      // #TMP GET USERID FROM DB BY GIVING TOKEN
-      if (userId) {
-        setUserData({ session_token: savedToken, userId });
-      } else {
-        deleteSessionToken();
-        setUserData({ session_token: null, userId: null });
+    const checkAuth = async () => {
+      try {
+        const res = await fetch(`${API_URL}/me`, { credentials: "include" });
+        if (res.ok) {
+          const data = await res.json();
+          setUserData({ userId: data.user_id, username: data.username });
+        }
+      } catch (err) {
+        setUserData(null);
+      } finally {
+        setIsLoading(false);
       }
-    }
-
-    setIsLoading(false);
+    };
+    checkAuth();
   }, []);
 
-  const setUser = useCallback((data) => {
-    setUserData(data);
-    if (data.session_token) {
-      setSessionToken(data.session_token);
-    } else {
-      deleteSessionToken();
-    }
+  const setUser = useCallback((userData) => {
+    setUserData(userData);
   }, []);
 
-  const clearUser = useCallback(() => {
-    const session_token = getSessionToken();
-    if (session_token) {
-    }
-    // #TMP REMOVE TOKEN BY DB
-    deleteSessionToken();
-    setUserData({ session_token: null, userId: null });
+  const clearUser = useCallback(async () => {
+    await fetch(`${API_URL}/logout`, {
+      method: "POST",
+      credentials: "include",
+    });
+    setUserData(null);
   }, []);
 
   const value = useMemo(
     () => ({
-      session_token: user.session_token,
-      userId: user.userId,
+      userId: user?.userId || null,
+      username: user?.username || null,
       isLoading,
       setUser,
       clearUser,
