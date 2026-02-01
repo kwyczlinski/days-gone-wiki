@@ -103,7 +103,7 @@ create or replace function search(key varchar(64)) returns table(name text, cate
   	    where lower(description) like lower('%'||key||'%') 
   	    limit 10)
   	  union all
-  	  (select upgrade as name, 'mechanic' as category, id_mechanic as id, 10 as weight 
+  	  (select upgrade as name, 'mechanic' as category, camp as id, 10 as weight 
   	    from mechanic 
   	    where lower(description) like lower('%'||key||'%') 
   	    limit 10)
@@ -429,3 +429,39 @@ as $$
   where c.id_camp = p_id_camp;
 $$;
 
+
+-- Służy do pobierania strony wiki dla regionu
+create or replace function get_region_page(p_id_region int)
+returns table(
+    region_id int,
+    name varchar,
+    camps json,
+    hordes json,
+    infestations json,
+    collectibles json,
+    missions json
+) 
+language sql 
+as $$
+  select 
+    r.id_region,
+    r.region_name as name,
+
+    (select json_agg(json_build_object('id', id_camp, 'name', camp_name)) 
+     from camp where region = r.id_region) as camps,
+    
+    (select json_agg(json_build_object('id', id_horde, 'name', horde_name)) 
+     from horde where region = r.id_region) as hordes,
+    
+    (select json_agg(json_build_object('id', id_infestation, 'name', infestation_name)) 
+     from infestation where region = r.id_region) as infestations,
+    
+    (select json_agg(json_build_object('id', id_collectible, 'name', collectible_name)) 
+     from collectible where region = r.id_region) as collectibles,
+
+    (select json_agg(json_build_object('id', id_mission, 'name', mission_name, 'main', main)) 
+     from mission where region = r.id_region) as missions
+
+  from region r
+  where r.id_region = p_id_region;
+$$;
