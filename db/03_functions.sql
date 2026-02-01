@@ -247,3 +247,37 @@ as $$
   join reward e on i.reward = e.id_reward
   where i.id_infestation = p_id_infestation;
 $$;
+
+--     "horde": "select * from get_horde_page(%s)",
+create or replace function get_horde_page(p_id_horde int)
+returns table(
+    horde_id int,
+    name varchar,
+    size int,
+    region_name varchar,
+    region_id int,
+    camp_name varchar,
+    camp_id varchar,
+    xp int,
+    trust int,
+    credits int
+)
+language sql 
+as $$
+  select 
+    h.id_horde,
+    h.horde_name as name, 
+    h.size,
+    r.region_name, 
+    r.id_region as region_id,
+    c.camp_name,
+    c.id_camp as camp_id,
+    e.xp int,
+    e.trust int,
+    e.credits int
+  from horde h
+  join region r on h.region = r.id_region
+  join camp c on h.camp = c.id_camp
+  join reward e on h.reward = e.id_reward
+  where h.id_horde = p_id_horde;
+$$;
