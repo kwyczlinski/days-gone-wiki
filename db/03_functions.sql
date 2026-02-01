@@ -294,26 +294,50 @@ returns table(
     region_name varchar,
     region_id int,
     camp_name varchar,
-    camp_id varchar,
+    camp_id int,
     xp int,
     trust int,
-    credits int
+    credits int,
+    previous_missions json,
+    next_missions json
 )
 language sql 
 as $$
   select 
     m.id_mission,
-    m.mission_name as name, 
+    m.mission_name, 
     m.description,
     m.main,
     m.start_time::text,
     r.region_name, 
-    r.id_region as region_id,
+    r.id_region,
     c.camp_name,
-    c.id_camp as camp_id,
-    e.xp int,
-    e.trust int,
-    e.credits int
+    c.id_camp,
+    e.xp, 
+    e.trust,
+    e.credits,
+    (
+      select json_agg(
+        json_build_object(
+          'id', prev.id_mission,
+          'name', prev.mission_name
+        )
+      )
+      from mission_order mo
+      join mission prev on mo.previous_mission = prev.id_mission
+      where mo.next_mission = p_id_mission
+    ) as previous_missions,
+    (
+      select json_agg(
+        json_build_object(
+          'id', nxt.id_mission,
+          'name', nxt.mission_name
+        )
+      )
+      from mission_order mo
+      join mission nxt on mo.next_mission = nxt.id_mission
+      where mo.previous_mission = p_id_mission
+    ) as next_missions
   from mission m
   join region r on m.region = r.id_region
   left join camp c on m.camp = c.id_camp
@@ -324,7 +348,7 @@ $$;
 -- Służy do pobierania strony wiki dla obozu
 create or replace function get_camp_page(p_id_camp int)
 returns table(
-    collectible_id int,
+    camp_id int,
     name varchar,
     description text,
     region_name varchar,
@@ -346,3 +370,33 @@ as $$
   join region r on c.region = r.id_region
   where c.id_camp = p_id_camp;
 $$;
+
+
+-- Służy do pobierania strony wiki dla mechanika
+create or replace function get_mechanic_page(p_id_camp int)
+returns table(
+    camp_id int,
+    camp_name varchar,
+    upgrades json
+) 
+language sql 
+as $$
+  select 
+    c.id_camp,
+    c.camp_name as name, 
+    (
+      select json_agg(
+        json_build_object(
+          'upgrade', m.upgrade,
+          'price', m.price,
+          'trust', m.trust,
+          'description', m.description
+        )
+      )
+      from mechanic m
+      where m.camp = c.id_camp
+    ) as upgrades
+  from camp c 
+  where c.id_camp = p_id_camp;
+$$;
+
