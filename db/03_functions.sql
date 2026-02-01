@@ -59,30 +59,30 @@ create or replace function search(key varchar(64)) returns table(name text, cate
       select distinct on (name, category, id) name, category, id, weight 
         from (
   	  (select mission_name as name, 'mission' as category, id_mission as id, 2 as weight 
-      	    from mission 
-      	    where lower(mission_name) like lower('%'||key||'%') 
-    	    limit 3)
-	  union all
-	  (select horde_name as name, 'horde' as category, id_horde as id, 2 as weight 
-    	    from horde 
-    	    where lower(horde_name) like lower('%'||key||'%') 
-    	    limit 3)
+      	from mission 
+      	where lower(mission_name) like lower('%'||key||'%') 
+    	  limit 3)
+	    union all
+	    (select horde_name as name, 'horde' as category, id_horde as id, 2 as weight 
+    	  from horde 
+    	  where lower(horde_name) like lower('%'||key||'%') 
+    	  limit 3)
   	  union all
   	  (select infestation_name as name, 'infestation' as category, id_infestation as id, 1 as weight 
-    	    from infestation 
-    	    where lower(infestation_name) like lower('%'||key||'%') 
-    	    limit 3)
+    	  from infestation 
+    	  where lower(infestation_name) like lower('%'||key||'%') 
+    	  limit 3)
   	  union all
-  	  (select item as name, 'merchant' as category, id_merchant as id, 3 as weight 
-    	    from merchant 
-    	    where lower(item) like lower('%'||key||'%')
-    	    limit 3)
-  	  union all
-  	  (select upgrade as name, 'mechanic' as category, id_mechanic as id, 3 as weight 
-   	    from mechanic 
-  	    where lower(upgrade) like lower('%'||key||'%') 
-  	    limit 3)
-  	  union all
+      (select item as name, 'merchant' as category, camp as id, 3 as weight 
+        from merchant 
+        where lower(item) like lower('%'||key||'%')
+        limit 3)
+      union all
+      (select upgrade as name, 'mechanic' as category, camp as id, 3 as weight 
+        from mechanic 
+        where lower(upgrade) like lower('%'||key||'%') 
+        limit 3)
+      union all
   	  (select camp_name as name, 'camp' as category, id_camp as id, 1 as weight 
   	    from camp 
   	    where lower(camp_name) like lower('%'||key||'%') 
@@ -396,6 +396,35 @@ as $$
       from mechanic m
       where m.camp = c.id_camp
     ) as upgrades
+  from camp c 
+  where c.id_camp = p_id_camp;
+$$;
+
+-- Służy do pobierania strony wiki dla sklepu z bronią
+create or replace function get_merchant_page(p_id_camp int)
+returns table(
+    camp_id int,
+    camp_name varchar,
+    items json
+) 
+language sql 
+as $$
+  select 
+    c.id_camp,
+    c.camp_name as name, 
+    (
+      select json_agg(
+        json_build_object(
+          'item', s.item,
+          'price', s.price,
+          'trust', s.trust,
+          'condition', s.condition,
+          'consumable', s.consumable
+        )
+      )
+      from merchant s
+      where s.camp = c.id_camp
+    ) as items
   from camp c 
   where c.id_camp = p_id_camp;
 $$;
