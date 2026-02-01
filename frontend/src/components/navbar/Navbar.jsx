@@ -1,5 +1,11 @@
 import { Search } from "./Search";
+import { Logo } from "./logo";
 
 export const Navbar = () => {
-  return <Search />;
+  return (
+    <nav>
+      <Search />
+      <Logo />
+    </nav>
+  );
 };
