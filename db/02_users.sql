@@ -5,7 +5,7 @@ create table wiki_user (
     id_user serial primary key,
     username varchar(16) not null,
     email varchar(256) not null unique,
-    password_hash varchar(256) not null
+    password_hash text not null
 );
 
 create table comment (
@@ -29,11 +29,21 @@ $$;
 
 -- Służy do dodawania użytkowników do bazy
 create or replace procedure
-  register_user(p_username varchar(16), p_email varchar(256), p_password_hash varchar(256))
+  register_user(p_username varchar(16), p_email varchar(256), p_password_hash text)
   language plpgsql
   as $$
   begin
     insert into wiki_user (username, email, password_hash) 
       values (p_username, p_email, p_password_hash); 
   end;
+$$;
+
+-- służy do wyciągania danych o użytkowniku po emailu
+create or replace function get_user_by_email(p_email varchar(256))
+returns setof wiki_user
+language sql 
+as $$
+  select *
+    from wiki_user 
+    where email = p_email;
 $$;
