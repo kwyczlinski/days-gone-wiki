@@ -6,7 +6,6 @@ create table wiki_user (
     username varchar(16) not null,
     email varchar(256) not null unique,
     password_hash text not null,
-    deleted boolean default false,
     rank varchar(16) default 'user'
 );
 
@@ -14,7 +13,7 @@ create table comment (
     id_comment serial primary key,
     id_user int not null references wiki_user(id_user),
     category varchar(20),
-    entity_id int,
+    item_id int,
     content text,
     created timestamp default current_timestamp,
     edited boolean default false
@@ -54,17 +53,17 @@ as $$
 $$;
 
 -- służy do dodawania komentarzy
-create or replace procedure add_comment(p_user_id int, p_content text, p_category varchar, p_entity_id int)
+create or replace procedure add_comment(p_user_id int, p_content text, p_category varchar, p_item_id int)
   language plpgsql
   as $$
   begin
-    insert into comment (id_user, category, entity_id, content) 
-      values (p_user_id, p_category, p_entity_id, p_content); 
+    insert into comment (id_user, category, item_id, content) 
+      values (p_user_id, p_category, p_item_id, p_content); 
   end;
 $$;
 
 -- służy do wyciągania komentarzy
-create or replace function get_comments(p_category varchar, p_entity_id int)
+create or replace function get_comments(p_category varchar, p_item_id int)
 returns json
 language plpgsql
 as $$
@@ -73,7 +72,7 @@ begin
     select 
       json_agg(json_build_object('id', c.id_comment,'user_id', c.id_user,'content', c.content,'posted', c.posted,'edited', c.edited))
       into v_comments
-    from comment c where c.category = p_category and c.entity_id = p_entity_id;
+    from comment c where c.category = p_category and c.item_id = p_item_id;
     return coalesce(v_comments, '[]'::json);
 end;
 $$;
@@ -98,4 +97,14 @@ as $$
 begin
     delete from comment c where c.id_comment = p_comment_id  and c.id_user = p_user_id;
 end;
+$$;
+
+-- służy do pobrania konkretnego komentarza
+create or replace function get_comment(p_comment_id int)
+returns setof comment
+  language plpgsql
+  as $$
+  begin
+    select * from comment c where c.id_comment = p_comment_id
+  end;
 $$;

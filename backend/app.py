@@ -70,7 +70,7 @@ def search():
         conn = get_db_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        cur.execute("SELECT * FROM search(%s)", (search_query,))
+        cur.execute("select * from search(%s)", (search_query,))
         results = cur.fetchall()
         
         cur.close()
@@ -85,7 +85,7 @@ def search():
         app.logger.error(f"Search failed: {str(err)}")
         return jsonify({"error": str(err)}), 500
 
-db_page_queries = {
+db_details_page_queries = {
     "region": "select * from get_region_page(%s)",
     "camp": "select * from get_camp_page(%s)",
     "mechanic": "select * from get_mechanic_page(%s)",
@@ -99,6 +99,7 @@ db_page_queries = {
 @app.get("/<category>/<int:item_id>")
 def getDetails(category, item_id):
     if not category or not item_id:
+        app.logger.warning(f"Missing category: {category} or id: {item_id}")
         return jsonify({"error": "Missing category or id"}), 400
 
     app.logger.info(f"Getting page {category} for id:{item_id}")
@@ -107,12 +108,14 @@ def getDetails(category, item_id):
         conn = get_db_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        query = db_page_queries.get(category)
+        query = db_details_page_queries.get(category)
         if not query:
+            app.logger.warning(f"Invalid category: {category}")
             return jsonify({"error": "Invalid category"}), 400
             
         cur.execute(query, (item_id,))
         result = cur.fetchone()
+        app.logger.info(result)
         
         cur.close()
         conn.close()
@@ -158,6 +161,7 @@ def login():
             token = jwt.encode({
                 "user_id": user["id_user"],
                 "username": user["username"],
+                "rank": user["rank"],
                 "exp": datetime.now(timezone.utc) + timedelta(hours=24)
             }, app.config["JWT_KEY"], algorithm="HS256")
 
@@ -171,7 +175,7 @@ def login():
                 token, 
                 httponly=True, 
                 samesite="Lax", 
-                secure=False,
+                secure=True,
                 max_age=86400 # 24h
             )
             return response
@@ -191,7 +195,7 @@ def logout():
         expires=0, 
         httponly=True,
         samesite="Lax",
-        secure=False
+        secure=True
     )
     return response, 200
 
@@ -209,16 +213,19 @@ def register():
         conn = get_db_conn()
         cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        cur.execute("SELECT * FROM is_email_used(%s)", (email,))
+        cur.execute("select * from is_email_used(%s)", (email,))
         result = cur.fetchone()
 
         cur.close()
         conn.close()
+
+        if result == None:
+            return jsonify({"error": "Not found"}), 404
         
-        if result.get("is_email_used") == True: # type: ignore
+        if result.get("is_email_used") == True:
             return jsonify({"error": "Email is already used"}), 400
 
-        if result.get("is_email_used") != False: # type: ignore
+        if result.get("is_email_used") != False:
             return jsonify({"error": "Database connection failed"}), 500
 
     except Exception as err:
@@ -247,6 +254,129 @@ def register():
 
     except Exception as err:
         app.logger.error(f"Registration failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.post("/comment")
+@token_required
+def add_comment(current_user):
+    data: dict[str, str] = request.json
+    if not (data and isinstance(data, dict) and data.get("id") and isinstance(data.get("id"), int) and data.get("category") and isinstance(data.get("category"), str) and data.get("content") and isinstance(data.get("content"), str) and data.get("content", "").strip()):
+        return jsonify({"error": "Bad comment data"}), 400
+
+    user_id = current_user["user_id"]
+    item_id = data["id"]
+    category = data["category"]
+    content = data["content"]
+
+    app.logger.info(f"Creating comment at /{category}/{item_id}")
+
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+        cur.execute("call add_comment(%s, %s, %s, %s)", (user_id, content, category, item_id))
+
+        conn.commit()
+        
+        cur.close()
+        conn.close()
+
+        return jsonify({"message": "Added comment successfully"}), 200
+
+    except Exception as err:
+        app.logger.error(f"Adding comment failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.get("/comment/<category>/<int:item_id>")
+def get_comments(category, item_id):
+    if not category or not item_id:
+        app.logger.warning(f"Missing category: {category} or id: {item_id}")
+        return jsonify({"error": "Missing category or id"}), 400
+    
+    try:
+        conn = get_db_conn()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+        cur.execute("select * from get_comments(%s, %s)", (category, item_id))
+        result = cur.fetchone()
+
+        cur.close()
+        conn.close()
+
+        return jsonify(result["comments"]), 200 # type: ignore
+
+    except Exception as err:
+        app.logger.error(f"Adding comment failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.patch("/comment/<int:comment_id>")
+@token_required
+def update_comment(current_user, comment_id):
+    data = request.json
+    content = data.get("content", "").strip()
+    if not content:
+        return jsonify({"error": "Content is required"}), 400
+
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+                cur.execute("select * from get_comment(%s)", (comment_id,))
+                result = cur.fetchone()
+
+                if not result:
+                    app.logger.warning(f"No comment found for id: {comment_id}")
+                    return jsonify({"error": "No comment found"}), 404
+
+                owner_id = result["id_user"]
+                if current_user["rank"] != "admin" and owner_id != current_user["user_id"]:
+                    app.logger.warning(f"No permision for comment: {comment_id}")
+                    return jsonify({"error": "No permission"}), 403
+
+                cur.execute("call update_comment(%s, %s, %s)", (comment_id, content, owner_id))
+                conn.commit()
+
+        app.logger.info(f"Updated comment {comment_id} {'by admin' if current_user['rank'] == 'admin' else ''}")
+        return jsonify({"message": "Updated successfully"}), 200
+
+    except Exception as err:
+        app.logger.error(f"Update failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.delete("/comment/<int:comment_id>")
+@token_required
+def delete_comment(current_user, comment_id):
+    if not (comment_id and isinstance(comment_id, int)):
+        return jsonify({"error": "Bad comment data"}), 400
+
+    user_id = current_user["user_id"]
+
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+                cur.execute("select * from get_comment(%s)", (comment_id,))
+                result = cur.fetchone()
+
+                if not result:
+                    app.logger.warning(f"No comment found for id: {comment_id}")
+                    return jsonify({"error": "No comment found"}), 404
+
+                owner_id = result["id_user"]
+                if current_user["rank"] != "admin" and owner_id != current_user["user_id"]:
+                    app.logger.warning(f"No permision for comment: {comment_id}")
+                    return jsonify({"error": "No permission"}), 403
+
+                app.logger.info(f"Deleting comment {comment_id} {'by admin' if current_user['rank'] == 'admin' else ''}")
+
+                cur.execute("call delete_comment(%s, %s)", (comment_id, owner_id))
+                conn.commit()
+
+        app.logger.info(f"Deleted comment {comment_id} {'by admin' if current_user['rank'] == 'admin' else ''}")
+        return jsonify({"message": "Deleted successfully"}), 200
+
+    except Exception as err:
+        app.logger.error(f"Deletion failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == "__main__":
