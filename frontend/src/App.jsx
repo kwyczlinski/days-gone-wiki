@@ -284,7 +284,7 @@ const DetailsPage = () => {
           </div>
         )}
       </footer>
-      {}
+      <hr />
       <CommentsBox category={category} itemId={id} />
     </div>
   );

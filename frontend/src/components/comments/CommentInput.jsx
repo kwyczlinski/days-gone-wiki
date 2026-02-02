@@ -47,7 +47,7 @@ export const CommentInput = ({ category, itemId, onCommentAdded }) => {
       }
       setContent("");
       if (onCommentAdded) onCommentAdded();
-    } catch (ex) {
+    } catch (err) {
       setError("Error submitting comment.");
     }
     setSubmitting(false);

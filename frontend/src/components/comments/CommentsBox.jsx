@@ -7,10 +7,10 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export const CommentsBox = ({ category, itemId }) => {
   const [comments, setComments] = useState([]);
-  const [isLoading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchComments = useCallback(async () => {
-      setLoading(true);
+      setIsLoading(true);
       try {
           const res = await fetch(`${API_URL}/comment?category=${category}&itemId=${itemId}`)
           if (!res.ok) throw new Error("Not found");
@@ -20,7 +20,7 @@ export const CommentsBox = ({ category, itemId }) => {
         console.log(err);
           toast.warning('Failed to load comments')
       } finally {
-          setLoading(false);
+          setIsLoading(false);
       }
   }, [category, itemId]);
 
@@ -43,10 +43,13 @@ export const CommentsBox = ({ category, itemId }) => {
         comments.map(comment => (
           <Comment
             key={comment.id}
+            comment_id={comment.id}
+            user_id={comment.user_id}
             username={comment.username}
             content={comment.content}
             posted={comment.posted}
             edited={comment.edited}
+            onCommentEdited={fetchComments}
           />
         ))
       )}

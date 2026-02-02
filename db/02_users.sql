@@ -106,16 +106,14 @@ end;
 $$;
 
 -- służy do modyfikowania komentarzy
-create or replace function update_comment(p_comment_id int, p_content text, p_user_id int)
-returns setof comment
-  language plpgsql
-  as $$
-  begin
-    return query
-    update comment c set c.content = p_content, c.edited = true, c.posted = current_timestamp
-    where c.id_comment = p_comment_id and c.id_user = p_user_id
-    returning *;
-  end;
+create or replace procedure update_comment(p_comment_id int, p_content text, p_user_id int)
+language plpgsql
+as $$
+begin
+    update comment
+    set content = p_content, edited = true, posted = current_timestamp
+    where id_comment = p_comment_id and id_user = p_user_id;
+end;
 $$;
 
 -- służy do usuwania komentarzy
@@ -133,6 +131,7 @@ returns setof comment
   language plpgsql
   as $$
   begin
+    return query
     select * from comment c where c.id_comment = p_comment_id;
   end;
 $$;
