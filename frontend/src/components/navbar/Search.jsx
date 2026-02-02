@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Dropdown } from "./Dropdown";
+import { Dropdown } from "./SearchDropdown";
 
 const API_URL = import.meta.env.VITE_API_URL;
 

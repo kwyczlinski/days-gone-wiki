@@ -6,10 +6,17 @@ import {
   useMemo,
   useCallback,
 } from "react";
+import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const UserContext = createContext({ userId: null, username: null });
+const UserContext = createContext({
+  userId: null,
+  username: null,
+  isLoading: false,
+  setUser: () => {},
+  clearUser: () => {},
+});
 
 export function UserProvider({ children }) {
   const [user, setUserData] = useState(null);
@@ -37,11 +44,17 @@ export function UserProvider({ children }) {
   }, []);
 
   const clearUser = useCallback(async () => {
-    await fetch(`${API_URL}/logout`, {
-      method: "POST",
-      credentials: "include",
-    });
-    setUserData(null);
+    try {
+      const res = await fetch(`${API_URL}/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Request failed");
+      setUserData(null);
+      toast.info("Logged out");
+    } catch (err) {
+      toast.error("Failed to log out");
+    }
   }, []);
 
   const value = useMemo(
@@ -52,7 +65,7 @@ export function UserProvider({ children }) {
       setUser,
       clearUser,
     }),
-    [user, isLoading, setUser, clearUser]
+    [user, isLoading, setUser, clearUser],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

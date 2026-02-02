@@ -1,3 +1,4 @@
+import { ProfileButton } from "./ProfileButton";
 import { Search } from "./Search";
 import { Logo } from "./logo";
 
@@ -6,6 +7,7 @@ export const Navbar = () => {
     <nav>
       <Search />
       <Logo />
+      <ProfileButton />
     </nav>
   );
 };

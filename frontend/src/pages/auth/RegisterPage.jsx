@@ -13,7 +13,7 @@ const schema = yup.object({
     .string()
     .matches(
       /^[a-zA-Z0-9]*$/,
-      "Username can not contain any special characters"
+      "Username can not contain any special characters",
     )
     .max(16, "Username can not exceed 16 chracters")
     .required("Username is required"),
@@ -31,7 +31,7 @@ const schema = yup.object({
     .matches(/[0-9]/, "Password must contain at least one number")
     .matches(
       /[!@#$%^&*(),.?":{}|<>]/,
-      "Password must contain at least one special character"
+      "Password must contain at least one special character",
     )
     .required("Password is required"),
   confirmPassword: yup
@@ -92,11 +92,16 @@ export const RegisterPage = () => {
         <h2>Create Account</h2>
 
         <label>Email</label>
-        <input {...register("email")} autoFocus type="text" />
+        <input
+          {...register("email")}
+          autoFocus
+          type="email"
+          autocomplete="email"
+        />
         <p>{errors.email?.message}</p>
 
         <label>Username</label>
-        <input {...register("username")} type="text" />
+        <input {...register("username")} type="text" autocomplete="username" />
         <p>{errors.username?.message}</p>
 
         <label>Password</label>
