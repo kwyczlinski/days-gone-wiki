@@ -13,6 +13,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 const UserContext = createContext({
   userId: null,
   username: null,
+  email: null,
   isLoading: false,
   setUser: () => {},
   clearUser: () => {},
@@ -28,7 +29,11 @@ export function UserProvider({ children }) {
         const res = await fetch(`${API_URL}/me`, { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
-          setUserData({ userId: data.user_id, username: data.username });
+          setUserData({
+            userId: data.user_id,
+            username: data.username,
+            email: data.email,
+          });
         }
       } catch (err) {
         setUserData(null);
@@ -61,6 +66,7 @@ export function UserProvider({ children }) {
     () => ({
       userId: user?.userId || null,
       username: user?.username || null,
+      email: user?.email || null,
       isLoading,
       setUser,
       clearUser,

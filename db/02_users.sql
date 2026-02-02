@@ -32,8 +32,7 @@ as $$
 $$;
 
 -- Służy do dodawania użytkowników do bazy
-create or replace procedure
-  register_user(p_username varchar(16), p_email varchar(256), p_password_hash text)
+create or replace procedure register_user(p_username varchar(16), p_email varchar(256), p_password_hash text)
   language plpgsql
   as $$
   begin
@@ -58,8 +57,8 @@ as $$
   select * from wiki_user where id_user = p_id_user;
 $$;
 
--- Służy do aktualizacji danych użytkownika
-create or replace function update_user_profile(p_id_user int, p_username varchar(16))
+-- Służy do aktualizacji nazwy użytkownika
+create or replace function update_user_username(p_id_user int, p_username varchar(16))
 returns setof wiki_user
 language plpgsql
 as $$
@@ -71,19 +70,25 @@ begin
 end;
 $$;
 
+-- Służy do aktualizacji danych logowania użytkownika
+create or replace function update_user_login(p_id_user int, p_email varchar, p_password_hash text)
+returns setof wiki_user
+language plpgsql
+as $$
+begin
+    return query
+    update wiki_user set email = p_email, password_hash = p_password_hash
+    where id_user = p_id_user
+    returning *;
+end;
+$$;
+
 -- Służy do usuwania danych użytkownika
 create or replace procedure delete_user(p_id_user int)
 language sql
 as $$
     delete from wiki_user where id_user = p_id_user;
 $$;
-
--- Służy do otrzymania zaszyfrowanego hasła użytkownika w celu weryfikacji
-create or replace function get_password_hash(p_id_user int)
-language sql
-as $$
-    select u.password_hash from wiki_user u where u.user_id = p_id_user;
-$$
 
 -- służy do dodawania komentarzy
 create or replace procedure add_comment(p_user_id int, p_content text, p_category varchar, p_item_id int)
@@ -118,7 +123,7 @@ language plpgsql
 as $$
 begin
     update comment
-    set content = p_content, edited = true, posted = current_timestamp
+    set content = p_content, edited = true
     where id_comment = p_comment_id and id_user = p_user_id;
 end;
 $$;

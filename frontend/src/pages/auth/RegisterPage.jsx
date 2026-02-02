@@ -96,12 +96,12 @@ export const RegisterPage = () => {
           {...register("email")}
           autoFocus
           type="email"
-          autocomplete="email"
+          autoComplete="email"
         />
         <p>{errors.email?.message}</p>
 
         <label>Username</label>
-        <input {...register("username")} type="text" autocomplete="username" />
+        <input {...register("username")} type="text" autoComplete="username" />
         <p>{errors.username?.message}</p>
 
         <label>Password</label>

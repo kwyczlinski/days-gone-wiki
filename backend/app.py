@@ -21,7 +21,7 @@ dictConfig(setup_logging())
 
 app = Flask(__name__)
 app.config["JWT_KEY"] = os.getenv("JWT_KEY")
-CORS(app, supports_credentials=True, origins=["http://localhost:5173"])
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}})
 
 def get_db_conn():
     conn = psycopg2.connect(
@@ -55,7 +55,8 @@ def token_required(f):
 def get_current_user(current_user):
     return jsonify({
         "user_id": current_user["user_id"],
-        "username": current_user["username"]
+        "username": current_user["username"],
+        "email": current_user["email"],
     }), 200
 
 @app.get("/search") #(/search?query=camp)
@@ -196,53 +197,44 @@ def register():
     if not (data and isinstance(data, dict) and data.get("email") and isinstance(data.get("email"), str) and data.get("username") and isinstance(data.get("username"), str) and data.get("password") and isinstance(data.get("password"), str)):
         app.logger.error("Bad registration request data")
         return jsonify({"error": "Bad registration data"}), 400
-    
+
     email = data["email"].strip()
-
-    # verifying email is free in db
-    try:
-        with get_db_conn() as conn:
-            with conn.cursor(cursor_factory=RealDictCursor) as cur:
-
-                cur.execute("select * from is_email_used(%s)", (email,))
-                result = cur.fetchone()
-
-        if result == None:
-            return jsonify({"error": "Not found"}), 404
-        
-        if result.get("is_email_used") == True:
-            return jsonify({"error": "Email is already used"}), 400
-
-        if result.get("is_email_used") != False:
-            return jsonify({"error": "Database connection failed"}), 500
-
-    except Exception as err:
-        app.logger.error(f"Email verification failed with: {str(err)}")
-        return jsonify({"error": "Email verification failed"}), 500
-    
     username = data["username"].strip()
     password_client_hash = data["password"]
     password_db_hash = generate_password_hash(password_client_hash)
 
-    app.logger.info(f"Creating a account for {username} with email: {email}")
-
-    # creating user account
     try:
         with get_db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            
+
+                # Verify if email is free in db
+                cur.execute("select * from is_email_used(%s)", (email,))
+                result = cur.fetchone()
+
+                if result is None:
+                    return jsonify({"error": "Not found"}), 404
+
+                if result.get("is_email_used") == True:
+                    return jsonify({"error": "Email is already used"}), 400
+
+                if result.get("is_email_used") != False:
+                    return jsonify({"error": "Database connection failed"}), 500
+
+                app.logger.info(f"Creating a account for {username} with email: {email}")
+
+                # Create user account
                 cur.execute("call register_user(%s, %s, %s)", (username, email, password_db_hash))
                 conn.commit()
-                
+
         return jsonify({"message": "Created account successfully"}), 200
 
     except Exception as err:
         app.logger.error(f"Registration failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
 
-@app.patch("/user/<int:user_id>")
+@app.patch("/user/username/<int:user_id>")
 @token_required
-def update_profile(current_user, user_id):
+def update_username(current_user, user_id):
     if current_user["user_id"] != user_id:
         return jsonify({"error": "Unauthorized"}), 403
 
@@ -255,7 +247,7 @@ def update_profile(current_user, user_id):
     try:
         with get_db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("select * from update_user_profile(%s, %s)", (user_id, username))
+                cur.execute("select * from update_user_username(%s, %s)", (user_id, username))
                 result = cur.fetchone()
                 conn.commit()
 
@@ -268,6 +260,47 @@ def update_profile(current_user, user_id):
         app.logger.error(f"Profile update failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.patch("/user/login/<int:user_id>")
+@token_required
+def update_login_data(current_user, user_id):
+    if current_user["user_id"] != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data: dict[str, str] = request.json
+    if not (data and isinstance(data, dict) and data.get("email") and isinstance(data.get("email"), str) and data.get("currentPassword") and isinstance(data.get("currentPassword"), str) and data.get("newPassword") and isinstance(data.get("newPassword"), str)):
+        return jsonify({"error": "Bad update request data"}), 400
+
+    email = data["email"].strip()
+    current_password_hash = data["currentPassword"].strip()
+    new_password_hash = data["newPassword"].strip()
+
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+
+                cur.execute(f"select * from get_user_by_id(%s)", (user_id,))
+                result = cur.fetchone()
+
+                if result is None:
+                    return jsonify({"error": "User not found"}), 404
+                    
+                password_db_hash = result["password_hash"]
+                if not check_password_hash(password_db_hash, current_password_hash):
+                    return jsonify({"error": "Incorrect password"}), 403
+
+                cur.execute("select * from update_user_login(%s, %s, %s)", (user_id, email, new_password_hash))
+                updated_result = cur.fetchone()
+                conn.commit()
+
+        if updated_result is None:
+            return jsonify({"error": "User not found"}), 404
+
+        return jsonify({"message": "Profile updated", "user": updated_result}), 200
+
+    except Exception as err:
+        app.logger.error(f"Profile update failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @app.delete("/user/<int:user_id>")
 @token_required
 def delete_account(current_user, user_id):
@@ -275,18 +308,18 @@ def delete_account(current_user, user_id):
         return jsonify({"error": "Unauthorized"}), 403
 
     data = request.json
-    if not (data and isinstance(data, dict) and data.get("password_hash") and isinstance(data.get("password_hash"), str)):
+    if not (data and isinstance(data, dict) and data.get("password") and isinstance(data.get("password"), str)):
         return jsonify({"error": "Password required"}), 400
 
-    password_client_hash = data["password_hash"]
+    password_client_hash = data["password"]
 
     try:
         with get_db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                # Get user's stored hash for comparison
-                cur.execute("get_password_hash(%s)", (user_id,))
+
+                cur.execute("select * from get_user_by_id(%s)", (user_id,))
                 result = cur.fetchone()
-                if not result:
+                if result is None:
                     return jsonify({"error": "User not found"}), 404
 
                 password_db_hash = result["password_hash"]

@@ -70,7 +70,7 @@ export const LoginPage = () => {
           {...register("email")}
           id="email"
           type="email"
-          autocomplete="email"
+          autoComplete="email"
           placeholder="Email"
           autoFocus
         />
