@@ -59,13 +59,13 @@ as $$
 $$;
 
 -- Służy do aktualizacji danych użytkownika
-create or replace function update_user_profile(p_id_user int, p_username varchar(16), p_email varchar(256))
+create or replace function update_user_profile(p_id_user int, p_username varchar(16))
 returns setof wiki_user
 language plpgsql
 as $$
 begin
     return query
-    update wiki_user set username = p_username, email = p_email
+    update wiki_user set username = p_username
     where id_user = p_id_user
     returning *;
 end;
@@ -77,6 +77,13 @@ language sql
 as $$
     delete from wiki_user where id_user = p_id_user;
 $$;
+
+-- Służy do otrzymania zaszyfrowanego hasła użytkownika w celu weryfikacji
+create or replace function get_password_hash(p_id_user int)
+language sql
+as $$
+    select u.password_hash from wiki_user u where u.user_id = p_id_user;
+$$
 
 -- służy do dodawania komentarzy
 create or replace procedure add_comment(p_user_id int, p_content text, p_category varchar, p_item_id int)

@@ -240,6 +240,69 @@ def register():
         app.logger.error(f"Registration failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.patch("/user/<int:user_id>")
+@token_required
+def update_profile(current_user, user_id):
+    if current_user["user_id"] != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data: dict[str, str] = request.json
+    if not (data and isinstance(data, dict) and data.get("username") and isinstance(data.get("username"), str)):
+        return jsonify({"error": "Bad update request data"}), 400
+
+    username = data["username"].strip()
+
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("select * from update_user_profile(%s, %s)", (user_id, username))
+                result = cur.fetchone()
+                conn.commit()
+
+        if result is None:
+            return jsonify({"error": "User not found"}), 404
+
+        return jsonify({"message": "Profile updated", "user": result}), 200
+
+    except Exception as err:
+        app.logger.error(f"Profile update failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
+
+@app.delete("/user/<int:user_id>")
+@token_required
+def delete_account(current_user, user_id):
+    if current_user["user_id"] != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    data = request.json
+    if not (data and isinstance(data, dict) and data.get("password_hash") and isinstance(data.get("password_hash"), str)):
+        return jsonify({"error": "Password required"}), 400
+
+    password_client_hash = data["password_hash"]
+
+    try:
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Get user's stored hash for comparison
+                cur.execute("get_password_hash(%s)", (user_id,))
+                result = cur.fetchone()
+                if not result:
+                    return jsonify({"error": "User not found"}), 404
+
+                password_db_hash = result["password_hash"]
+
+                if not check_password_hash(password_db_hash, password_client_hash):
+                    return jsonify({"error": "Incorrect password"}), 403
+
+                cur.execute("call delete_user(%s)", (user_id,))
+                conn.commit()
+
+        return jsonify({"message": "Account deleted"}), 200
+
+    except Exception as err:
+        app.logger.error(f"Account deletion failed: {str(err)}")
+        return jsonify({"error": "Internal server error"}), 500
+
 @app.post("/comment")
 @token_required
 def add_comment(current_user):

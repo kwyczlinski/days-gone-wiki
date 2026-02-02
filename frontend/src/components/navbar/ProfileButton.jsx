@@ -12,6 +12,9 @@ export function ProfileButton() {
       </div>
 
       <div className={styles.dropdown}>
+        <div>
+          <Link to="/profile">Edit profile</Link>
+        </div>
         {userId ? (
           <button onClick={clearUser}>Log out</button>
         ) : (
