@@ -15,7 +15,7 @@ create table comment (
     category varchar(20),
     item_id int,
     content text,
-    created timestamp default current_timestamp,
+    posted timestamp default current_timestamp,
     edited boolean default false
 );
 
@@ -96,9 +96,11 @@ as $$
 declare v_comments json;
 begin
     select 
-      json_agg(json_build_object('id', c.id_comment,'user_id', c.id_user,'content', c.content,'posted', c.posted,'edited', c.edited))
+      json_agg(json_build_object('id', c.id_comment,'user_id', c.id_user, 'username', u.username,'content', c.content,'posted', c.posted,'edited', c.edited))
       into v_comments
-    from comment c where c.category = p_category and c.item_id = p_item_id;
+    from comment c 
+    join wiki_user u on c.id_user = u.id_user
+    where c.category = p_category and c.item_id = p_item_id;
     return coalesce(v_comments, '[]'::json);
 end;
 $$;
@@ -110,7 +112,7 @@ returns setof comment
   as $$
   begin
     return query
-    update comment c set c.content = p_content, c.edited = true, c.created = current_timestamp
+    update comment c set c.content = p_content, c.edited = true, c.posted = current_timestamp
     where c.id_comment = p_comment_id and c.id_user = p_user_id
     returning *;
   end;

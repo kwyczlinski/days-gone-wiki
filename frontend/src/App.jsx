@@ -4,6 +4,8 @@ import { Routes, Route, useParams, Link } from "react-router";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
 import { useState, useEffect } from "react";
+import {CommentsBox} from "./components/comments/CommentsBox";
+import {toast} from "react-toastify";
 
 const VITE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -172,26 +174,24 @@ const DetailsPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
-
     const handleShowDetails = async () => {
       setLoading(true);
       try {
         const res = await fetch(`${VITE_API_URL}/${category}/${id}`);
         if (!res.ok) throw new Error("Not found");
         const result = await res.json();
-        if (isMounted) setData(result);
+        setData(result);
       } catch (err) {
-        if (isMounted) setData(null);
+        toast.error("An error occured, please refresh")
+        setData(null);
       } finally {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       }
     };
 
     handleShowDetails();
 
     return () => {
-      isMounted = false;
       setData(null);
     };
   }, [category, id]);
@@ -284,6 +284,8 @@ const DetailsPage = () => {
           </div>
         )}
       </footer>
+      {}
+      <CommentsBox category={category} itemId={id} />
     </div>
   );
 };

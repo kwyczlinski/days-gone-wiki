@@ -13,7 +13,7 @@ const UserContext = createContext({ userId: null, username: null });
 
 export function UserProvider({ children }) {
   const [user, setUserData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -26,7 +26,7 @@ export function UserProvider({ children }) {
       } catch (err) {
         setUserData(null);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
     checkAuth();

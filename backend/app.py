@@ -166,7 +166,7 @@ def login():
                 token, 
                 httponly=True, 
                 samesite="Lax", 
-                secure=True,
+                secure=False,
                 max_age=21600 # 6h
             )
             return response
@@ -186,7 +186,7 @@ def logout():
         expires=0, 
         httponly=True,
         samesite="Lax",
-        secure=True
+        secure=False
     )
     return response, 200
 
@@ -244,7 +244,7 @@ def register():
 @token_required
 def add_comment(current_user):
     data: dict[str, str] = request.json
-    if not (data and isinstance(data, dict) and data.get("id") and isinstance(data.get("id"), int) and data.get("category") and isinstance(data.get("category"), str) and data.get("content") and isinstance(data.get("content"), str) and data.get("content", "").strip()):
+    if not (data and isinstance(data, dict) and data.get("id") and isinstance(data.get("id"), str) and data.get("category") and isinstance(data.get("category"), str) and data.get("content") and isinstance(data.get("content"), str) and data.get("content", "").strip()):
         return jsonify({"error": "Bad comment data"}), 400
 
     user_id = current_user["user_id"]
@@ -267,8 +267,10 @@ def add_comment(current_user):
         app.logger.error(f"Adding comment failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
 
-@app.get("/comment/<category>/<int:item_id>")
-def get_comments(category, item_id):
+@app.get("/comment") #(/comment?category=camp&itemId=3)
+def get_comments():
+    category = request.args.get("category")
+    item_id = request.args.get("itemId")
     if not category or not item_id:
         app.logger.warning(f"Missing category: {category} or id: {item_id}")
         return jsonify({"error": "Missing category or id"}), 400
@@ -279,8 +281,11 @@ def get_comments(category, item_id):
                     
                 cur.execute("select * from get_comments(%s, %s)", (category, item_id))
                 result = cur.fetchone()
-
-                return jsonify(result["comments"]), 200 # type: ignore
+                
+                if result and "get_comments" in result:
+                    return jsonify(result["get_comments"]), 200
+                
+                return jsonify([]), 200
 
     except Exception as err:
         app.logger.error(f"Adding comment failed: {str(err)}")
