@@ -11,7 +11,7 @@ create table wiki_user (
 
 create table comment (
     id_comment serial primary key,
-    id_user int not null references wiki_user(id_user),
+    id_user int not null references wiki_user(id_user) on delete cascade,
     category varchar(20),
     item_id int,
     content text,
@@ -42,14 +42,40 @@ create or replace procedure
   end;
 $$;
 
--- służy do wyciągania danych o użytkowniku po emailu
-create or replace function get_user_by_email(p_email varchar(256))
+-- Służy do wyciągania danych o użytkowniku po emailu
+create or replace function get_user_by_email(p_email varchar)
 returns setof wiki_user
 language sql 
 as $$
-  select *
-    from wiki_user 
-    where email = p_email;
+  select * from wiki_user where email = p_email;
+$$;
+
+-- Służy do wyciągania danych o użytkowniku po id
+create or replace function get_user_by_id(p_id_user int)
+returns setof wiki_user
+language sql
+as $$
+  select * from wiki_user where id_user = p_id_user;
+$$;
+
+-- Służy do aktualizacji danych użytkownika
+create or replace function update_user_profile(p_id_user int, p_username varchar(16), p_email varchar(256))
+returns setof wiki_user
+language plpgsql
+as $$
+begin
+    return query
+    update wiki_user set username = p_username, email = p_email
+    where id_user = p_id_user
+    returning *;
+end;
+$$;
+
+-- Służy do usuwania danych użytkownika
+create or replace procedure delete_user(p_id_user int)
+language sql
+as $$
+    delete from wiki_user where id_user = p_id_user;
 $$;
 
 -- służy do dodawania komentarzy
@@ -105,6 +131,6 @@ returns setof comment
   language plpgsql
   as $$
   begin
-    select * from comment c where c.id_comment = p_comment_id
+    select * from comment c where c.id_comment = p_comment_id;
   end;
 $$;

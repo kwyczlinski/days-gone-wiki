@@ -67,14 +67,11 @@ def search():
     app.logger.info(f"Searching for: {search_query}")
 
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
         
-        cur.execute("select * from search(%s)", (search_query,))
-        results = cur.fetchall()
-        
-        cur.close()
-        conn.close()
+                cur.execute("select * from search(%s)", (search_query,))
+                results = cur.fetchall()
 
         if not results:
             return jsonify({"error": "Not found"}), 404
@@ -105,20 +102,17 @@ def getDetails(category, item_id):
     app.logger.info(f"Getting page {category} for id:{item_id}")
 
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
         
-        query = db_details_page_queries.get(category)
-        if not query:
-            app.logger.warning(f"Invalid category: {category}")
-            return jsonify({"error": "Invalid category"}), 400
-            
-        cur.execute(query, (item_id,))
-        result = cur.fetchone()
-        app.logger.info(result)
-        
-        cur.close()
-        conn.close()
+                query = db_details_page_queries.get(category)
+                if not query:
+                    app.logger.warning(f"Invalid category: {category}")
+                    return jsonify({"error": "Invalid category"}), 400
+                    
+                cur.execute(query, (item_id,))
+                result = cur.fetchone()
+                app.logger.info(result)
         
         if not result:
             return jsonify({"error": "Not found"}), 404
@@ -139,14 +133,11 @@ def login():
         return jsonify({"error": "Missing credentials"}), 400
 
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
         
-        cur.execute("select * from get_user_by_email(%s)", (email,))
-        user = cur.fetchone()
-        
-        cur.close()
-        conn.close()
+                cur.execute("select * from get_user_by_email(%s)", (email,))
+                user = cur.fetchone()
 
         if not user:
             return jsonify({"error": "Invalid email or password"}), 401
@@ -162,7 +153,7 @@ def login():
                 "user_id": user["id_user"],
                 "username": user["username"],
                 "rank": user["rank"],
-                "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+                "exp": datetime.now(timezone.utc) + timedelta(hours=6)
             }, app.config["JWT_KEY"], algorithm="HS256")
 
             response = make_response(jsonify({
@@ -176,7 +167,7 @@ def login():
                 httponly=True, 
                 samesite="Lax", 
                 secure=True,
-                max_age=86400 # 24h
+                max_age=21600 # 6h
             )
             return response
         
@@ -210,14 +201,11 @@ def register():
 
     # verifying email is free in db
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-        cur.execute("select * from is_email_used(%s)", (email,))
-        result = cur.fetchone()
-
-        cur.close()
-        conn.close()
+                cur.execute("select * from is_email_used(%s)", (email,))
+                result = cur.fetchone()
 
         if result == None:
             return jsonify({"error": "Not found"}), 404
@@ -240,16 +228,12 @@ def register():
 
     # creating user account
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
             
-        cur.execute("call register_user(%s, %s, %s)", (username, email, password_db_hash))
-        
-        conn.commit()
-        
-        cur.close()
-        conn.close()
-
+                cur.execute("call register_user(%s, %s, %s)", (username, email, password_db_hash))
+                conn.commit()
+                
         return jsonify({"message": "Created account successfully"}), 200
 
     except Exception as err:
@@ -271,15 +255,11 @@ def add_comment(current_user):
     app.logger.info(f"Creating comment at /{category}/{item_id}")
 
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
             
-        cur.execute("call add_comment(%s, %s, %s, %s)", (user_id, content, category, item_id))
-
-        conn.commit()
-        
-        cur.close()
-        conn.close()
+                cur.execute("call add_comment(%s, %s, %s, %s)", (user_id, content, category, item_id))
+                conn.commit()
 
         return jsonify({"message": "Added comment successfully"}), 200
 
@@ -294,16 +274,13 @@ def get_comments(category, item_id):
         return jsonify({"error": "Missing category or id"}), 400
     
     try:
-        conn = get_db_conn()
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-            
-        cur.execute("select * from get_comments(%s, %s)", (category, item_id))
-        result = cur.fetchone()
+        with get_db_conn() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    
+                cur.execute("select * from get_comments(%s, %s)", (category, item_id))
+                result = cur.fetchone()
 
-        cur.close()
-        conn.close()
-
-        return jsonify(result["comments"]), 200 # type: ignore
+                return jsonify(result["comments"]), 200 # type: ignore
 
     except Exception as err:
         app.logger.error(f"Adding comment failed: {str(err)}")
@@ -348,8 +325,6 @@ def update_comment(current_user, comment_id):
 def delete_comment(current_user, comment_id):
     if not (comment_id and isinstance(comment_id, int)):
         return jsonify({"error": "Bad comment data"}), 400
-
-    user_id = current_user["user_id"]
 
     try:
         with get_db_conn() as conn:
