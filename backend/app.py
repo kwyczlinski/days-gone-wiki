@@ -14,7 +14,6 @@ from config import setup_logging
 
 import jwt
 from datetime import datetime, timezone, timedelta
-from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 dictConfig(setup_logging())
@@ -54,9 +53,10 @@ def token_required(f):
 @token_required
 def get_current_user(current_user):
     return jsonify({
-        "user_id": current_user["user_id"],
-        "username": current_user["username"],
-        "email": current_user["email"],
+        "user_id": current_user.get("user_id"),
+        "username": current_user.get("username"),
+        "email": current_user.get("email"),
+        "rank": current_user.get("rank")
     }), 200
 
 @app.get("/search") #(/search?query=camp)
@@ -81,7 +81,7 @@ def search():
 
     except Exception as err:
         app.logger.error(f"Search failed: {str(err)}")
-        return jsonify({"error": str(err)}), 500
+        return jsonify({"error": "Internal server error"}), 500
 
 db_details_page_queries = {
     "region": "select * from get_region_page(%s)",
@@ -149,17 +149,19 @@ def login():
             return jsonify({"error": "Invalid email or password"}), 401
 
 
-        if check_password_hash(password_db_hash, password_client_hash):
+        if password_db_hash == password_client_hash:
             token = jwt.encode({
                 "user_id": user["id_user"],
                 "username": user["username"],
+                "email": user["email"],
                 "rank": user["rank"],
                 "exp": datetime.now(timezone.utc) + timedelta(hours=6)
             }, app.config["JWT_KEY"], algorithm="HS256")
 
             response = make_response(jsonify({
                 "username": user["username"],
-                "user_id": user["id_user"]
+                "user_id": user["id_user"],
+                "email": user["email"]
             }))
 
             response.set_cookie(
@@ -198,10 +200,10 @@ def register():
         app.logger.error("Bad registration request data")
         return jsonify({"error": "Bad registration data"}), 400
 
-    email = data["email"].strip()
+    email = data["email"].strip().lower()
     username = data["username"].strip()
-    password_client_hash = data["password"]
-    password_db_hash = generate_password_hash(password_client_hash)
+    password_hash = data["password"]
+    
 
     try:
         with get_db_conn() as conn:
@@ -223,7 +225,7 @@ def register():
                 app.logger.info(f"Creating a account for {username} with email: {email}")
 
                 # Create user account
-                cur.execute("call register_user(%s, %s, %s)", (username, email, password_db_hash))
+                cur.execute("call register_user(%s, %s, %s)", (username, email, password_hash))
                 conn.commit()
 
         return jsonify({"message": "Created account successfully"}), 200
@@ -267,38 +269,44 @@ def update_login_data(current_user, user_id):
         return jsonify({"error": "Unauthorized"}), 403
 
     data: dict[str, str] = request.json
-    if not (data and isinstance(data, dict) and data.get("email") and isinstance(data.get("email"), str) and data.get("currentPassword") and isinstance(data.get("currentPassword"), str) and data.get("newPassword") and isinstance(data.get("newPassword"), str)):
+    if not (data and isinstance(data, dict) and data.get("email") and isinstance(data.get("email"), str) and data.get("currentPassword") and isinstance(data.get("currentPassword"), str) and "newPassword" in data):
         return jsonify({"error": "Bad update request data"}), 400
 
-    email = data["email"].strip()
-    current_password_hash = data["currentPassword"].strip()
-    new_password_hash = data["newPassword"].strip()
+    new_email = data.get("email").strip().lower()
+    current_password_hash = data.get("currentPassword").strip()
+    new_password_client_hash = data.get("newPassword")
 
     try:
         with get_db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
 
-                cur.execute(f"select * from get_user_by_id(%s)", (user_id,))
-                result = cur.fetchone()
+                cur.execute("select * from get_user_by_id(%s)", (user_id,))
+                user = cur.fetchone()
 
-                if result is None:
+                if not user:
                     return jsonify({"error": "User not found"}), 404
-                    
-                password_db_hash = result["password_hash"]
-                if not check_password_hash(password_db_hash, current_password_hash):
-                    return jsonify({"error": "Incorrect password"}), 403
 
-                cur.execute("select * from update_user_login(%s, %s, %s)", (user_id, email, new_password_hash))
-                updated_result = cur.fetchone()
+                if user["password_hash"] != current_password_hash:
+                    return jsonify({"error": "Incorrect current password"}), 403
+
+                if new_email != user["email"].lower():
+                    cur.execute("select * from is_email_used(%s)", (new_email,))
+                    if cur.fetchone()["is_email_used"]:
+                        return jsonify({"error": "Email is already in use"}), 409
+
+                set_password = user["password_hash"]
+                if new_password_client_hash and new_password_client_hash.strip() != "":
+                    if user["password_hash"] != new_password_client_hash:
+                        set_password = new_password_client_hash
+
+                cur.execute("select * from update_user_login(%s, %s, %s)",(user_id, new_email, set_password))
+                updated_user = cur.fetchone()
                 conn.commit()
 
-        if updated_result is None:
-            return jsonify({"error": "User not found"}), 404
-
-        return jsonify({"message": "Profile updated", "user": updated_result}), 200
+        return jsonify({"message": "Profile updated", "user": updated_user}), 200
 
     except Exception as err:
-        app.logger.error(f"Profile update failed: {str(err)}")
+        app.logger.error(f"Profile login data update failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
 
 @app.delete("/user/<int:user_id>")
@@ -324,7 +332,7 @@ def delete_account(current_user, user_id):
 
                 password_db_hash = result["password_hash"]
 
-                if not check_password_hash(password_db_hash, password_client_hash):
+                if password_db_hash != password_client_hash:
                     return jsonify({"error": "Incorrect password"}), 403
 
                 cur.execute("call delete_user(%s)", (user_id,))

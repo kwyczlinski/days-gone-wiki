@@ -113,7 +113,7 @@ export const RegisterPage = () => {
         <p>{errors.confirmPassword?.message}</p>
 
         <div>
-          <button type="submit">Complete</button>
+          <button type="submit">Register</button>
         </div>
 
         <Link to="/login">Already have an account? Log in</Link>
