@@ -20,3 +20,8 @@
 ### Personal projects were used and publicly accessible templates
 
 - **PLpgSQL:** taken from Database class
+
+### Dodanie tls
+
+- Zainstaluj mkcert.
+- mkdir certs && mkcert -install && mkcert -cert-file certs/cert.pem -key-file certs/key.pem localhost 127.0.0.1 <TWOJE_IP>.

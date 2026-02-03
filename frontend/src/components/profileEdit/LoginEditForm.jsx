@@ -5,7 +5,6 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { useUserCtx } from "../../contexts/UserContext";
-import { hashPassword } from "../../lib/auth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -72,20 +71,13 @@ export function LoginEditForm() {
 
   const onSubmit = async (data) => {
     try {
-      const currentPasswordHash = await hashPassword(data.currentPassword);
-
-      let newPasswordHash = "";
-      if (data.newPassword) {
-        newPasswordHash = await hashPassword(data.newPassword);
-      }
-
       const res = await fetch(`${API_URL}/user/login/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: data.email,
-          currentPassword: currentPasswordHash,
-          newPassword: newPasswordHash,
+          currentPassword: data.currentPassword,
+          newPassword: data.newPassword ? data.newPassword : "",
         }),
         credentials: "include",
       });

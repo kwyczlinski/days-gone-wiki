@@ -3,7 +3,6 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { hashPassword } from "../../lib/auth";
 import { GuestGuard } from "../../components/guard/GuestGuard";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -13,7 +12,7 @@ const schema = yup.object({
     .string()
     .matches(
       /^[a-zA-Z0-9]*$/,
-      "Username can not contain any special characters",
+      "Username can not contain any special characters"
     )
     .max(16, "Username can not exceed 16 chracters")
     .required("Username is required"),
@@ -31,7 +30,7 @@ const schema = yup.object({
     .matches(/[0-9]/, "Password must contain at least one number")
     .matches(
       /[!@#$%^&*(),.?":{}|<>]/,
-      "Password must contain at least one special character",
+      "Password must contain at least one special character"
     )
     .required("Password is required"),
   confirmPassword: yup
@@ -53,18 +52,12 @@ export const RegisterPage = () => {
     mode: "onBlur",
   });
 
-  const onSubmit = async ({ username, email, password }) => {
-    const clientHashedPassword = await hashPassword(password);
-
+  const onSubmit = async (data) => {
     try {
       const res = await fetch(`${API_URL}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-          email,
-          password: clientHashedPassword,
-        }),
+        body: JSON.stringify(data),
       });
 
       const result = await res.json();

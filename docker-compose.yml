@@ -27,6 +27,7 @@ services:
       - ./backend:/app
       - ./backend/logs:/app/logs
       - /app/__pycache__
+      - ./certs:/app/certs:ro
     networks:
       - wiki-network
 
@@ -37,7 +38,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=http://localhost:5000
+      - VITE_API_URL=https://192.168.1.97:5000
     stdin_open: true
     tty: true
     depends_on:
@@ -45,6 +46,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+      - ./certs:/app/certs:ro
     networks:
       - wiki-network
 

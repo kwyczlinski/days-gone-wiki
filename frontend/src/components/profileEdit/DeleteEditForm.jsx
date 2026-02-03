@@ -5,7 +5,6 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { toast } from "react-toastify";
 import { useUserCtx } from "../../contexts/UserContext";
 import { useNavigate } from "react-router-dom";
-import { hashPassword } from "../../lib/auth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -29,13 +28,12 @@ export function DeleteEditForm() {
   });
 
   const onSubmit = async ({ password }) => {
-    const ClientHashedPassword = await hashPassword(password);
     try {
       const res = await fetch(`${API_URL}/user/${userId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ password: ClientHashedPassword }),
+        body: JSON.stringify({ password }),
       });
       if (!res.ok) {
         const errorData = await res.json();

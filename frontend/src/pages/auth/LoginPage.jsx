@@ -5,7 +5,6 @@ import { GuestGuard } from "../../components/guard/GuestGuard";
 import { useUserCtx } from "../../contexts/UserContext";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { hashPassword } from "../../lib/auth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -30,14 +29,12 @@ export const LoginPage = () => {
 
   const onSubmit = async (data) => {
     try {
-      const clientHashedPassword = await hashPassword(data.password);
-
       const res = await fetch(`${API_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: data.email,
-          password: clientHashedPassword,
+          password: data.password,
         }),
         credentials: "include",
       });

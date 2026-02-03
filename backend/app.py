@@ -14,13 +14,14 @@ from config import setup_logging
 
 import jwt
 from datetime import datetime, timezone, timedelta
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 dictConfig(setup_logging())
 
 app = Flask(__name__)
 app.config["JWT_KEY"] = os.getenv("JWT_KEY")
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173"]}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["https://localhost:5173", "https://192.168.1.97:5173"]}})
 
 def get_db_conn():
     conn = psycopg2.connect(
@@ -128,9 +129,9 @@ def getDetails(category, item_id):
 def login():
     data = request.json
     email = data.get("email")
-    password_client_hash = data.get("password") 
+    password = data.get("password") 
 
-    if not email or not password_client_hash:
+    if not email or not password:
         return jsonify({"error": "Missing credentials"}), 400
 
     try:
@@ -149,7 +150,7 @@ def login():
             return jsonify({"error": "Invalid email or password"}), 401
 
 
-        if password_db_hash == password_client_hash:
+        if check_password_hash(password_db_hash, password):
             token = jwt.encode({
                 "user_id": user["id_user"],
                 "username": user["username"],
@@ -168,9 +169,9 @@ def login():
                 "session_token", 
                 token, 
                 httponly=True, 
-                samesite="Lax", 
-                secure=False,
-                max_age=21600 # 6h
+                secure=True,
+                samesite='None',
+                max_age=10800 # 3h
             )
             return response
         
@@ -186,10 +187,11 @@ def logout():
     response.set_cookie(
         "session_token", 
         "", 
+        max_age=0,
         expires=0, 
         httponly=True,
-        samesite="Lax",
-        secure=False
+        secure=True,
+        samesite='None'
     )
     return response, 200
 
@@ -202,8 +204,8 @@ def register():
 
     email = data["email"].strip().lower()
     username = data["username"].strip()
-    password_hash = data["password"]
-    
+    password = data["password"]
+    password_db_hash = generate_password_hash(password)
 
     try:
         with get_db_conn() as conn:
@@ -225,7 +227,7 @@ def register():
                 app.logger.info(f"Creating a account for {username} with email: {email}")
 
                 # Create user account
-                cur.execute("call register_user(%s, %s, %s)", (username, email, password_hash))
+                cur.execute("call register_user(%s, %s, %s)", (username, email, password_db_hash))
                 conn.commit()
 
         return jsonify({"message": "Created account successfully"}), 200
@@ -273,8 +275,8 @@ def update_login_data(current_user, user_id):
         return jsonify({"error": "Bad update request data"}), 400
 
     new_email = data.get("email").strip().lower()
-    current_password_hash = data.get("currentPassword").strip()
-    new_password_client_hash = data.get("newPassword")
+    current_password = data.get("currentPassword").strip()
+    new_password = data.get("newPassword")
 
     try:
         with get_db_conn() as conn:
@@ -286,7 +288,7 @@ def update_login_data(current_user, user_id):
                 if not user:
                     return jsonify({"error": "User not found"}), 404
 
-                if user["password_hash"] != current_password_hash:
+                if not check_password_hash(user["password_hash"],  current_password):
                     return jsonify({"error": "Incorrect current password"}), 403
 
                 if new_email != user["email"].lower():
@@ -294,12 +296,12 @@ def update_login_data(current_user, user_id):
                     if cur.fetchone()["is_email_used"]:
                         return jsonify({"error": "Email is already in use"}), 409
 
-                set_password = user["password_hash"]
-                if new_password_client_hash and new_password_client_hash.strip() != "":
-                    if user["password_hash"] != new_password_client_hash:
-                        set_password = new_password_client_hash
+                set_password_hash = user["password_hash"]
+                if new_password and new_password.strip() != "":
+                    if not check_password_hash(user["password_hash"], new_password):
+                        set_password_hash = generate_password_hash(new_password)
 
-                cur.execute("select * from update_user_login(%s, %s, %s)",(user_id, new_email, set_password))
+                cur.execute("select * from update_user_login(%s, %s, %s)",(user_id, new_email, set_password_hash))
                 updated_user = cur.fetchone()
                 conn.commit()
 
@@ -319,7 +321,7 @@ def delete_account(current_user, user_id):
     if not (data and isinstance(data, dict) and data.get("password") and isinstance(data.get("password"), str)):
         return jsonify({"error": "Password required"}), 400
 
-    password_client_hash = data["password"]
+    password = data["password"]
 
     try:
         with get_db_conn() as conn:
@@ -332,7 +334,7 @@ def delete_account(current_user, user_id):
 
                 password_db_hash = result["password_hash"]
 
-                if password_db_hash != password_client_hash:
+                if not check_password_hash(password_db_hash, password):
                     return jsonify({"error": "Incorrect password"}), 403
 
                 cur.execute("call delete_user(%s)", (user_id,))
@@ -464,5 +466,9 @@ def delete_comment(current_user, comment_id):
         return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == "__main__":
-    # host="0.0.0.0" is protocol setting for Docker
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(
+            host="0.0.0.0", 
+            port=5000, 
+            debug=True,
+            ssl_context=('/app/certs/cert.pem', '/app/certs/key.pem')
+        )
