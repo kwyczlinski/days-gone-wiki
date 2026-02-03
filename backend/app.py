@@ -75,6 +75,10 @@ def search():
                 cur.execute("select * from search(%s)", (search_query,))
                 results = cur.fetchall()
 
+
+        if results == []:
+            return jsonify([]), 200
+
         if not results:
             return jsonify({"error": "Not found"}), 404
 

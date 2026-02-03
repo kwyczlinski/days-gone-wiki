@@ -20,7 +20,6 @@ export const Search = () => {
         json.length === 0
           ? setData([
               {
-                name: "No results found",
                 category: "Try searching something else",
                 id: "empty",
                 noClick: true,
@@ -31,8 +30,7 @@ export const Search = () => {
       .catch((err) => {
         setData([
           {
-            name: "Please try again later",
-            category: err.message,
+            category: "Please try again later",
             id: "error",
             error: true,
             noClick: true,

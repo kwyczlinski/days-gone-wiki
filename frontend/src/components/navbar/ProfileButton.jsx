@@ -14,13 +14,17 @@ export function ProfileButton() {
       <div className={styles.dropdown}>
         {userId ? (
           <>
-            <div>
+            <div className={styles.dropdownItem}>
               <Link to="/profile">Edit profile</Link>
             </div>
-            <button onClick={clearUser}>Log out</button>
+            <button onClick={clearUser} className={styles.dropdownItem}>
+              Log out
+            </button>
           </>
         ) : (
-          <Link to="/login">Log in</Link>
+          <Link to="/login" className={styles.dropdownItem}>
+            Log in
+          </Link>
         )}
       </div>
     </div>
