@@ -53,7 +53,11 @@ export function DeleteEditForm() {
     <form onSubmit={handleSubmit(onSubmit)}>
       <h3>To delete account type current password below</h3>
       <label>Current password</label>
-      <input {...register("password")} type="password" />
+      <input
+        {...register("password")}
+        type="password"
+        autoComplete="new-password"
+      />
       <p>{errors.password?.message}</p>
       <button type="submit">Delete Account</button>
     </form>

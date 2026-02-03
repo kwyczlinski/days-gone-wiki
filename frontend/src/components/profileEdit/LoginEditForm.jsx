@@ -33,7 +33,7 @@ const protectedSchema = yup.object({
           .matches(/[0-9]/, "Must contain at least one number")
           .matches(
             /[!@#$%^&*(),.?":{}|<>]/,
-            "Must contain at least one special character",
+            "Must contain at least one special character"
           ),
     }),
   confirmPassword: yup.string().when("newPassword", {
@@ -103,7 +103,7 @@ export function LoginEditForm() {
       }
 
       toast.success(
-        "Login information updated. Please log in with your new credentials.",
+        "Login information updated. Please log in with your new credentials."
       );
       clearUser();
       navigate("/login");
@@ -121,7 +121,11 @@ export function LoginEditForm() {
       <p>{errors.email?.message}</p>
 
       <label>Current Password (to confirm changes)</label>
-      <input {...register("currentPassword")} type="password" />
+      <input
+        {...register("currentPassword")}
+        type="password"
+        autoComplete="new-password"
+      />
       <p>{errors.currentPassword?.message}</p>
 
       <label>New Password</label>

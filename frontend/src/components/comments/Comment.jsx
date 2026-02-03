@@ -1,29 +1,67 @@
-import React, { useState, useMemo, useCallback } from 'react';
-import { useUserCtx } from '../../contexts/UserContext';
+import React, { useState, useMemo, useCallback } from "react";
+import { useUserCtx } from "../../contexts/UserContext";
+import { toast } from "react-toastify";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export const Comment = ({ comment_id, username, content, posted, edited, user_id, onCommentEdited }) => {
+export const Comment = ({
+  comment_id,
+  username,
+  content,
+  posted,
+  edited,
+  user_id,
+  onCommentEdited,
+}) => {
   const userCtx = useUserCtx();
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(content);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  
-  const canEdit = useMemo(() => userCtx.userId && (userCtx.userId === user_id || userCtx.rank === 'admin'), [userCtx, user_id])
-  
+  const [error, setError] = useState("");
+
+  const canEdit = useMemo(
+    () =>
+      userCtx.userId &&
+      (userCtx.userId === user_id || userCtx.rank === "admin"),
+    [userCtx, user_id]
+  );
+
   const handleEdit = useCallback(() => {
     setEditContent(content);
     setIsEditing(true);
-    setError('');
-  }, [])
-  
+    setError("");
+  }, []);
+
   const handleCancel = useCallback(() => {
     setIsEditing(false);
     setEditContent(content);
-    setError('');
-  }, [])
- 
+    setError("");
+  }, []);
+
+  const handleDelete = useCallback(async () => {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${API_URL}/comment/${comment_id}`, {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error("Failed to delete comment.");
+      }
+      toast.success("Deleted comment");
+      onCommentEdited();
+    } catch (err) {
+      toast.error("Error deleting comment.");
+    } finally {
+      setIsDeleting(false);
+    }
+  }, []);
+
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editContent.trim()) {
@@ -43,8 +81,9 @@ export const Comment = ({ comment_id, username, content, posted, edited, user_id
         setError(data.error || "Failed to update comment.");
       } else {
         setIsEditing(false);
-        setError('');
-        if (onCommentEdited) onCommentEdited();
+        setError("");
+        toast.success("Comment edited.");
+        onCommentEdited();
       }
     } catch (err) {
       setError("Update failed.");
@@ -53,43 +92,39 @@ export const Comment = ({ comment_id, username, content, posted, edited, user_id
   };
 
   return (
-    <div style={{ marginBottom: "1em", padding: "0.5em", border: "1px #ccc solid", borderRadius: 4 }}>
-      <div style={{ fontSize: "0.9em", color: "#666" }}>
-        <span style={{ fontWeight: "bold" }}>{username}</span>
-        <span style={{ marginLeft: 8 }}>
+    <div>
+      <div>
+        <span>{username}</span>
+        <span>
           {new Date(posted).toLocaleString()}
           {edited && <span> (edited)</span>}
         </span>
-        {canEdit && !isEditing && (
-          <button onClick={handleEdit} style={{ marginLeft: 16, fontSize: "0.8em" }}>
-            Edit
+        {canEdit && !isEditing && <button onClick={handleEdit}>Edit</button>}
+        {canEdit && (
+          <button onClick={handleDelete} disabled={isDeleting}>
+            Delete
           </button>
         )}
       </div>
       {!isEditing ? (
-        <div style={{ marginTop: 5 }}>{content}</div>
+        <div>{content}</div>
       ) : (
         <form onSubmit={handleEditSubmit}>
           <textarea
             value={editContent}
-            onChange={e => setEditContent(e.target.value)}
+            onChange={(e) => setEditContent(e.target.value)}
             rows={3}
-            style={{ width: "100%", marginTop: 5 }}
             disabled={submitting}
           />
-          <div style={{ marginTop: 4 }}>
-            <button
-              type="submit"
-              disabled={submitting || !editContent.trim()}
-              style={{ marginRight: 8 }}
-            >
+          <div>
+            <button type="submit" disabled={submitting || !editContent.trim()}>
               {submitting ? "Saving..." : "Save"}
             </button>
             <button type="button" onClick={handleCancel} disabled={submitting}>
               Cancel
             </button>
           </div>
-          {error && <div style={{ color: 'red', marginTop: 4 }}>{error}</div>}
+          {error && <div>{error}</div>}
         </form>
       )}
     </div>
