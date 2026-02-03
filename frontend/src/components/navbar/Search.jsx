@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Dropdown } from "./SearchDropdown";
+import styles from "./Search.module.css";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -56,16 +57,18 @@ export const Search = () => {
   }, [query]);
 
   return (
-    <div>
+    <div className={styles.searchWrapper}>
       <search>
         <input
+          className={styles.searchInput}
           type="search"
           name="search"
-          id="search"
+          value={query}
+          placeholder="search"
           onChange={(e) => setQuery(e.target.value)}
         />
       </search>
-      <Dropdown data={data} />
+      {data && <Dropdown data={data} />}
     </div>
   );
 };

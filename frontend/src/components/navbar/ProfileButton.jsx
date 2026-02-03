@@ -6,7 +6,7 @@ export function ProfileButton() {
   const { userId, clearUser } = useUserCtx();
 
   return (
-    <div className={styles.container}>
+    <div tabIndex="0" className={styles.container}>
       <div className={styles.icon}>
         <span>👤</span>
       </div>
