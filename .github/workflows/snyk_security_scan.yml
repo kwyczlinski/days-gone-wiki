@@ -2,36 +2,29 @@ name: Snyk Security Scan
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   schedule:
-    - cron: '0 0 * * 1'
+    - cron: "0 0 * * 1"
 
 permissions:
   contents: read
-  security-events: write # required for Snyk to save reports to security tab
+  security-events: write
 
 jobs:
   security:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # --- Layer 1: Python at backend ---
-      - name: Set up Python
-        uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          fetch-depth: 0
 
-      - name: Install Backend Dependencies
-        run: |
-          cd backend
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
-      - name: Run Snyk to check Python vulnerabilities
-        uses: snyk/actions/python@master
+      # --- Python scan ---
+      - name: Run Snyk Python scan
+        uses: snyk/actions/python@v3
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -39,19 +32,9 @@ jobs:
           command: test
           args: --file=backend/requirements.txt --package-manager=pip --sarif-file-output=snyk-python.sarif
 
-      # --- Layer 2: Node.js at frontend ---
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Frontend Dependencies
-        run: |
-          cd frontend
-          if [ -f package-lock.json ]; then npm ci; else npm install; fi
-
-      - name: Run Snyk to check Node.js vulnerabilities
-        uses: snyk/actions/node@master
+      # --- Node.js scan ---
+      - name: Run Snyk Node.js scan
+        uses: snyk/actions/node@v3
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -59,30 +42,33 @@ jobs:
           command: test
           args: --file=frontend/package.json --sarif-file-output=snyk-node.sarif
 
-      # --- Layer 3: IaC at docker compose ---
-      - name: Run Snyk to check Docker Compose / Infrastructure as Code
-        uses: snyk/actions/iac@master
+      # --- IaC scan (Docker Compose) ---
+      - name: Run Snyk IaC scan
+        uses: snyk/actions/iac@v3
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: docker-compose.yml --sarif-file-output=snyk-iac.sarif
+          args: --file=docker-compose.yml --sarif-file-output=snyk-iac.sarif
 
-      # ---  Sending raportów to Security tab on GitHub ---
-      - name: Upload Snyk Python results to GitHub Security
+      # --- Upload results to GitHub Security tab ---
+      - name: Upload Python SARIF
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk-python.sarif
           category: snyk-python
 
-      - name: Upload Snyk Node results to GitHub Security
+      - name: Upload Node SARIF
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk-node.sarif
           category: snyk-node
 
-      - name: Upload Snyk IaC results to GitHub Security
+      - name: Upload IaC SARIF
+        if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: snyk-iac.sarif
