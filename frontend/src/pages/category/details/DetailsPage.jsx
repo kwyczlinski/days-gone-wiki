@@ -190,6 +190,9 @@ export const DetailsPage = () => {
   }, [category, id]);
 
   if (loading) return <p>Loading...</p>;
+
+  if (!data) return <div style={{padding: "20px"}}><h3>Nie udało się załadować danych.</h3><Link to="/">Powrót</Link></div>;
+
   const pageTitle =
     category === "mechanic" || category === "merchant"
       ? `${data.name || data.camp_name} ${
