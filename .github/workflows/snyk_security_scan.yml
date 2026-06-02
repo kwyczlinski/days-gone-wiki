@@ -10,16 +10,16 @@ on:
 
 permissions:
   contents: read
-  security-events: write # Snyk can write raports
+  security-events: write # required for Snyk to save reports to security tab
 
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/actions/checkout@v4
+        uses: actions/checkout@v4
 
-      # --- Layer 1: python at backend ---
+      # --- Layer 1: Python at backend ---
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -32,18 +32,23 @@ jobs:
 
       - name: Run Snyk to check Python vulnerabilities
         uses: snyk/actions/python@master
-        continue-on-error: true # raport and continue testing
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --file=backend/requirements.txt --package-manager=pip
+          args: --file=backend/requirements.txt --package-manager=pip --sarif-file-output=snyk-python.sarif
 
-      # ---Layer 2 node.js at frontend ---
+      # --- Layer 2: Node.js at frontend ---
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # update if vite updates to use newer
+          node-version: '20'
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
       - name: Run Snyk to check Node.js vulnerabilities
         uses: snyk/actions/node@master
@@ -52,9 +57,9 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --file=frontend/package.json
+          args: --file=frontend/package.json --sarif-file-output=snyk-node.sarif
 
-      # --- Layer 3: IAAC at docker compose ---
+      # --- Layer 3: IaC at docker compose ---
       - name: Run Snyk to check Docker Compose / Infrastructure as Code
         uses: snyk/actions/iac@master
         continue-on-error: true
@@ -62,4 +67,23 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: docker-compose.yml
+          args: docker-compose.yml --sarif-file-output=snyk-iac.sarif
+
+      # ---  Sending raportów to Security tab on GitHub ---
+      - name: Upload Snyk Python results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-python.sarif
+          category: snyk-python
+
+      - name: Upload Snyk Node results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-node.sarif
+          category: snyk-node
+
+      - name: Upload Snyk IaC results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-iac.sarif
+          category: snyk-iac
