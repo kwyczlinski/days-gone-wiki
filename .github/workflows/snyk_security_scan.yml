@@ -1,0 +1,65 @@
+name: Snyk Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 0 * * 1' # Automatyczny skan w każdy poniedziałek o północy
+
+permissions:
+  contents: read
+  security-events: write # Wymagane, aby Snyk mógł wrzucić raport do zakładki Security na GitHubie
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/actions/checkout@v4
+
+      # --- WARSTWA 1: SKANOWANIE PYTHON (BACKEND) ---
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Dopasuj do wersji ze swojego Dockerfile backendu
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run Snyk to check Python vulnerabilities
+        uses: snyk/actions/python@master
+        continue-on-error: true # Skan zaraportuje błędy, ale nie przerwie kolejnych kroków
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --file=backend/requirements.txt --package-manager=pip
+
+      # --- WARSTWA 2: SKANOWANIE NODE.JS (FRONTEND) ---
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Dopasuj do wersji ze swojego Dockerfile frontendu
+
+      - name: Run Snyk to check Node.js vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --file=frontend/package.json
+
+      # --- WARSTWA 3: SKANOWANIE PLIKÓW IAAC (DOCKER COMPOSE) ---
+      - name: Run Snyk to check Docker Compose / Infrastructure as Code
+        uses: snyk/actions/iac@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: docker-compose.yml
