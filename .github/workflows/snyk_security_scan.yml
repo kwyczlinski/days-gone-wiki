@@ -22,7 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      # --- Python scan ---
+      # --- Layer 1: Python at backend ---
       - name: Run Snyk Python scan
         uses: snyk/actions/python@master
         continue-on-error: true
@@ -30,9 +30,13 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --file=backend/requirements.txt --package-manager=pip --sarif-file-output=snyk-python.sarif
+          sarif: true
+          args: --file=backend/requirements.txt --package-manager=pip
+  
+      - name: Rename Python SARIF
+        run: if [ -f snyk.sarif ]; then mv snyk.sarif snyk-python.sarif; fi
 
-      # --- Node.js scan ---
+      # --- Layer 2: Node.js at frontend ---
       - name: Run Snyk Node.js scan
         uses: snyk/actions/node@master
         continue-on-error: true
@@ -40,9 +44,13 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --file=frontend/package.json --sarif-file-output=snyk-node.sarif
+          sarif: true
+          args: --file=frontend/package.json
 
-      # --- IaC scan (Docker Compose) ---
+      - name: Rename Node SARIF
+        run: if [ -f snyk.sarif ]; then mv snyk.sarif snyk-node.sarif; fi
+
+      # --- Layer 3: IaC at docker compose ---
       - name: Run Snyk IaC scan
         uses: snyk/actions/iac@master
         continue-on-error: true
@@ -50,7 +58,11 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: docker-compose.yml --sarif-file-output=snyk-iac.sarif
+          sarif: true
+          args: docker-compose.yml
+
+      - name: Rename IaC SARIF
+        run: if [ -f snyk.sarif ]; then mv snyk.sarif snyk-iac.sarif; fi
 
       # --- Upload results to GitHub Security tab ---
       - name: Upload Python SARIF
