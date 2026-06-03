@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  security-events: write
 
 jobs:
   security:
@@ -19,8 +18,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       # --- Layer 1: Python at backend ---
       - name: Run Snyk Python scan
@@ -30,11 +27,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          sarif: true
           args: --file=backend/requirements.txt --package-manager=pip
-  
-      - name: Rename Python SARIF
-        run: if [ -f snyk.sarif ]; then mv snyk.sarif snyk-python.sarif; fi
 
       # --- Layer 2: Node.js at frontend ---
       - name: Run Snyk Node.js scan
@@ -44,11 +37,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          sarif: true
           args: --file=frontend/package.json
-
-      - name: Rename Node SARIF
-        run: if [ -f snyk.sarif ]; then mv snyk.sarif snyk-node.sarif; fi
 
       # --- Layer 3: IaC at docker compose ---
       - name: Run Snyk IaC scan
@@ -58,30 +47,4 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          sarif: true
           args: docker-compose.yml
-
-      - name: Rename IaC SARIF
-        run: if [ -f snyk.sarif ]; then mv snyk.sarif snyk-iac.sarif; fi
-
-      # --- Upload results to GitHub Security tab ---
-      - name: Upload Python SARIF
-        if: hashFiles('snyk-python.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: snyk-python.sarif
-          category: snyk-python
-
-      - name: Upload Node SARIF
-        if: hashFiles('snyk-node.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: snyk-node.sarif
-          category: snyk-node
-
-      - name: Upload IaC SARIF
-        if: hashFiles('snyk-iac.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: snyk-iac.sarif
-          category: snyk-iac
