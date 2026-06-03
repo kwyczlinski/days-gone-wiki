@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     https: {
-      key: fs.readFileSync("./certs/key.pem"), // Ścieżka relatywna wewnątrz kontenera /app
-      cert: fs.readFileSync("./certs/cert.pem"),
+      key: fs.readFileSync("/certs/key.pem"), 
+      cert: fs.readFileSync("/certs/cert.pem"),
     },
     host: true,
     port: 5173,
@@ -17,7 +17,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "https://localhost:5000",
+        target: "https://wiki-api:5000", // Wewnątrz sieci Dockera używaj nazwy serwisu kontenera zamiast localhost
         changeOrigin: true,
         secure: false,
       },

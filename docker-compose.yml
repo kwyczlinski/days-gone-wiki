@@ -1,14 +1,39 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:16
     platform: linux/amd64
     container_name: wiki-db
     ports:
       - "5432:5432"
     environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-wiki}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - ./db:/docker-entrypoint-initdb.d
+      - wiki_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-wiki}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - wiki-network
+
+  redis:
+    image: redis:alpine
+    container_name: wiki-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - wiki-network
 
@@ -21,13 +46,15 @@ services:
       - "5000:5000"
     environment:
       - DB_HOST=db
+      - VITE_AUTH_SERVER_URL=https://wiki-auth-server:9000/application/o/days-gone-wiki # ADDED S
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - ./backend:/app
       - ./backend/logs:/app/logs
       - /app/__pycache__
-      - ./certs:/app/certs:ro
+      - ./certs:/certs:ro
     networks:
       - wiki-network
 
@@ -38,18 +65,74 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_API_URL=https://192.168.1.97:5000
+      - VITE_API_URL=https://localhost:5000
     stdin_open: true
     tty: true
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     volumes:
       - ./frontend:/app
-      - /app/node_modules
-      - ./certs:/app/certs:ro
+      - frontend_node_modules:/app/node_modules
+      - ./certs:/certs:ro
+    networks:
+      - wiki-network
+
+  authentik-server:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: wiki-auth-server
+    restart: unless-stopped
+    command: server
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: db
+      AUTHENTIK_POSTGRESQL__USER: ${DB_USER:-postgres}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${DB_PASSWORD}
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+    volumes:
+      - ./authentik/media:/media
+      - ./authentik/templates:/templates
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - wiki-network
+
+  authentik-worker:
+    image: ghcr.io/goauthentik/server:latest
+    container_name: wiki-auth-worker
+    restart: unless-stopped
+    command: worker
+    environment:
+      AUTHENTIK_REDIS__HOST: redis
+      AUTHENTIK_POSTGRESQL__HOST: db
+      AUTHENTIK_POSTGRESQL__USER: ${DB_USER:-postgres}
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${DB_PASSWORD}
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+    volumes:
+      - ./authentik/media:/media
+      - ./authentik/templates:/templates
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - wiki-network
 
 networks:
   wiki-network:
     driver: bridge
+
+volumes:
+  frontend_node_modules:
+  wiki_postgres_data:
+    name: wiki_production_postgres_volume

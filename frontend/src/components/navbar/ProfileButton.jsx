@@ -1,9 +1,9 @@
 import { useUserCtx } from "../../contexts/UserContext";
-import { Link } from "react-router";
+import { Link } from "react-router-dom";
 import styles from "./ProfileButton.module.css";
 
 export function ProfileButton() {
-  const { userId, clearUser } = useUserCtx();
+  const { isAuthenticated, login, logout } = useUserCtx();
 
   return (
     <div tabIndex="0" className={styles.container}>
@@ -12,19 +12,19 @@ export function ProfileButton() {
       </div>
 
       <div className={styles.dropdown}>
-        {userId ? (
+        {isAuthenticated ? (
           <>
             <div className={styles.dropdownItem}>
               <Link to="/profile">Edit profile</Link>
             </div>
-            <button onClick={clearUser} className={styles.dropdownItem}>
+            <button onClick={logout} className={styles.dropdownItem}>
               Log out
             </button>
           </>
         ) : (
-          <Link to="/login" className={styles.dropdownItem}>
+          <button onClick={login} className={styles.dropdownItem}>
             Log in
-          </Link>
+          </button>
         )}
       </div>
     </div>
