@@ -24,7 +24,7 @@ jobs:
 
       # --- Python scan ---
       - name: Run Snyk Python scan
-        uses: snyk/actions/python@v3
+        uses: snyk/actions/python@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -34,7 +34,7 @@ jobs:
 
       # --- Node.js scan ---
       - name: Run Snyk Node.js scan
-        uses: snyk/actions/node@v3
+        uses: snyk/actions/node@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -44,13 +44,13 @@ jobs:
 
       # --- IaC scan (Docker Compose) ---
       - name: Run Snyk IaC scan
-        uses: snyk/actions/iac@v3
+        uses: snyk/actions/iac@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: --file=docker-compose.yml --sarif-file-output=snyk-iac.sarif
+          args: docker-compose.yml --sarif-file-output=snyk-iac.sarif
 
       # --- Upload results to GitHub Security tab ---
       - name: Upload Python SARIF
