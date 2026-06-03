@@ -54,22 +54,22 @@ jobs:
 
       # --- Upload results to GitHub Security tab ---
       - name: Upload Python SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: hashFiles('snyk-python.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk-python.sarif
           category: snyk-python
 
       - name: Upload Node SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: hashFiles('snyk-node.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk-node.sarif
           category: snyk-node
 
       - name: Upload IaC SARIF
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        if: hashFiles('snyk-iac.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: snyk-iac.sarif
           category: snyk-iac
