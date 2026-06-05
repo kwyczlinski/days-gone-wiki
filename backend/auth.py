@@ -2,7 +2,7 @@ import os
 import requests
 from functools import wraps
 from flask import request, jsonify, current_app, make_response
-from jwt import PyJWKClient, decode, ExpiredSignatureError, InvalidTokenError
+from jwt import PyJWKClient, decode
 
 AUTH_ISSUER = os.getenv("AUTHENTIK_ISSUER")
 AUTH_BASE_INTERNAL = os.getenv("AUTHENTIK_INTERNAL_URL", "http://wiki-auth-server:9000")

@@ -1,4 +1,3 @@
-import os
 from flask import Blueprint, request, jsonify, current_app
 from psycopg2.extras import RealDictCursor
 from database import db_conn

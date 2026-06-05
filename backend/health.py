@@ -1,8 +1,8 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, jsonify, current_app
 from psycopg2.extras import RealDictCursor
 from database import db_conn
 
-health_bp = Blueprint("wiki", __name__)
+health_bp = Blueprint("health", __name__)
 
 @health_bp.route('/api/health', methods=['GET'])
 def health_check():
