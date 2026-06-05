@@ -1,29 +1,60 @@
 services:
+  gateway:
+    image: nginx:alpine
+    container_name: wiki-gateway
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+      - ./nginx-gateway.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_started
+    networks:
+      - external-net
+      - internal-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   db:
     image: postgres:16
-    platform: linux/amd64
     container_name: wiki-db
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME:-wiki}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
-      - ./db:/docker-entrypoint-initdb.d
+      - ./db:/docker-entrypoint-initdb.d:ro
       - wiki_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-wiki}"
-        ]
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER:-postgres} -d $${DB_NAME:-wiki}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - wiki-network
+      - internal-net # Brak sekcji ports - baza jest ukryta przed hostem!
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   redis:
     image: redis:alpine
@@ -35,52 +66,71 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - wiki-network
+      - internal-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
 
   backend:
     build: ./backend
-    platform: linux/amd64
     container_name: wiki-api
     env_file: .env
-    ports:
-      - "5000:5000"
     environment:
       - DB_HOST=db
-      - VITE_AUTH_SERVER_URL=https://wiki-auth-server:9000/application/o/days-gone-wiki # ADDED S
+      - REDIS_HOST=redis
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
-      - ./backend:/app
       - ./backend/logs:/app/logs
-      - /app/__pycache__
-      - ./certs:/certs:ro
+      # - ./backend:/app # Opcjonalny bind mount kodu źródłowego na potrzeby deweloperskie (zgodnie z przeznaczeniem)
+    stop_grace_period: 15s
     networks:
-      - wiki-network
+      - internal-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   frontend:
-    build: ./frontend
-    platform: linux/amd64
+    build:
+      context: ./frontend
+      args:
+          - VITE_API_URL=${VITE_API_URL}
+          - VITE_AUTHENTIK_PUBLIC_URL=${VITE_AUTHENTIK_PUBLIC_URL}
+          - VITE_AUTHENTIK_CLIENT_ID=${VITE_AUTHENTIK_CLIENT_ID}
     container_name: wiki-ui
-    ports:
-      - "5173:5173"
-    environment:
-      - VITE_API_URL=https://localhost:5000
-    stdin_open: true
-    tty: true
-    depends_on:
-      backend:
-        condition: service_started
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-      - ./certs:/certs:ro
     networks:
-      - wiki-network
+      - internal-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
 
   authentik-server:
     image: ghcr.io/goauthentik/server:latest
-    container_name: wiki-auth-server
+    container_name: authentik-server
     restart: unless-stopped
     command: server
     environment:
@@ -90,23 +140,31 @@ services:
       AUTHENTIK_POSTGRESQL__PASSWORD: ${DB_PASSWORD}
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_HOST: ${AUTHENTIK_HOST}
     volumes:
       - ./authentik/media:/media
       - ./authentik/templates:/templates
-    ports:
-      - "9000:9000"
-      - "9443:9443"
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     networks:
-      - wiki-network
+      - internal-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.75'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   authentik-worker:
     image: ghcr.io/goauthentik/server:latest
-    container_name: wiki-auth-worker
+    container_name: authentik-worker
     restart: unless-stopped
     command: worker
     environment:
@@ -117,6 +175,7 @@ services:
       AUTHENTIK_POSTGRESQL__NAME: authentik
       AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
       AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_HOST: ${AUTHENTIK_HOST}
     volumes:
       - ./authentik/media:/media
       - ./authentik/templates:/templates
@@ -126,13 +185,24 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - wiki-network
+      - internal-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
-  wiki-network:
+  external-net:
+    driver: bridge
+  internal-net:
     driver: bridge
 
 volumes:
-  frontend_node_modules:
   wiki_postgres_data:
     name: wiki_production_postgres_volume
