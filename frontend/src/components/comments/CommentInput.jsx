@@ -9,7 +9,7 @@ export const CommentInput = ({ category, itemId, onCommentAdded }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  if (!userCtx.userId) {
+  if (!userCtx.isAuthenticated || !userCtx.user.userId || !userCtx.user.username ) {
     return (
       <div>
         <em>You must be logged in to post a comment.</em>
@@ -66,7 +66,8 @@ export const CommentInput = ({ category, itemId, onCommentAdded }) => {
         <button
           type="submit"
           disabled={
-            !userCtx.userId ||
+            !userCtx.isAuthenticated ||
+            !userCtx.user.userId ||
             !content.trim() ||
             submitting
           }
