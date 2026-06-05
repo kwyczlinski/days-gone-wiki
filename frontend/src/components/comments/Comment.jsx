@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useUserCtx } from "../../contexts/UserContext";
 import { toast } from "react-toastify";
 
@@ -32,13 +32,13 @@ export const Comment = ({
     setEditContent(content);
     setIsEditing(true);
     setError("");
-  }, []);
+  }, [content]);
 
   const handleCancel = useCallback(() => {
     setIsEditing(false);
     setEditContent(content);
     setError("");
-  }, []);
+  }, [content]);
 
   const handleDelete = useCallback(async () => {
     setIsDeleting(true);
@@ -52,16 +52,17 @@ export const Comment = ({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error("Failed to delete comment.");
+        throw new Error("Failed to delete comment : ", err);
       }
       toast.success("Deleted comment");
       onCommentEdited();
     } catch (err) {
+      console.log(err);
       toast.error("Error deleting comment.");
     } finally {
       setIsDeleting(false);
     }
-  }, []);
+  }, [comment_id, onCommentEdited]);
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -87,6 +88,7 @@ export const Comment = ({
         onCommentEdited();
       }
     } catch (err) {
+      console.log(err);
       setError("Update failed.");
     }
     setSubmitting(false);

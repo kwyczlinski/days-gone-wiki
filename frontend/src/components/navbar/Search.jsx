@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Dropdown } from "./SearchDropdown";
 import styles from "./Search.module.css";
 
@@ -8,26 +8,35 @@ export const Search = () => {
   const [data, setData] = useState(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const debounceTimeout = useRef(null);
 
-  const fetchSearch = (query) =>
-    fetch(`${API_URL}/search?query=${query}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-        return res.json();
-      })
-      .then((json) => {
-        json.length === 0
-          ? setData([
-              {
-                category: "Try searching something else",
-                id: "empty",
-                noClick: true,
-              },
-            ])
-          : setData(json);
-      })
-      .catch((err) => {
+  useEffect(() => {
+    const run = async () => {
+      const q = debouncedQuery.trim()
+
+      if (!q) {
+        setData(null)
+        return
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/search?query=${q}`)
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`)
+
+        const json = await res.json()
+
+        if (json.length === 0) {
+          setData([
+            {
+              category: "Try searching something else",
+              id: "empty",
+              noClick: true,
+            },
+          ])
+        } else {
+          setData(json)
+        }
+      } catch (err) {
+        console.log(err)
         setData([
           {
             category: "Please try again later",
@@ -35,24 +44,20 @@ export const Search = () => {
             error: true,
             noClick: true,
           },
-        ]);
-      });
-
-  useEffect(() => {
-    if (!debouncedQuery.trim()) {
-      setData(null);
-      return;
+        ])
+      }
     }
-    fetchSearch(debouncedQuery.trim());
-  }, [debouncedQuery]);
+
+    run()
+  }, [debouncedQuery])
 
   useEffect(() => {
-    clearTimeout(debounceTimeout.current);
-    debounceTimeout.current = setTimeout(() => {
-      setDebouncedQuery(query);
-      clearTimeout(debounceTimeout.current);
-    }, 300);
-  }, [query]);
+    const timeout = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, 300)
+
+    return () => clearTimeout(timeout)
+  }, [query])
 
   return (
     <div className={styles.searchWrapper}>

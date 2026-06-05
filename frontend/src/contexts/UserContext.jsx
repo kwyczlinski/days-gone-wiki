@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect, useMemo, useCallback, useContext } from "react";
 import { toast } from "react-toastify";
-import { generateRandomString, base64UrlEncode, sha256, createCodeChallenge } from "../utils/auth/pkce"
+import { generateRandomString, createCodeChallenge } from "../utils/auth/pkce"
 
 const AUTHENTIK_PUBLIC_URL = import.meta.env.VITE_AUTHENTIK_PUBLIC_URL;
 const CLIENT_ID = import.meta.env.VITE_AUTHENTIK_CLIENT_ID;
