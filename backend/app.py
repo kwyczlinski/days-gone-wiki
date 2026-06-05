@@ -20,13 +20,13 @@ app = Flask(__name__)
 
 CORS(
     app,
-    resources={r"/*": {"origins": ["https://localhost:5173"]}},
+    resources={r"/*": {"origins": ["https://wiki.local", "https://auth.local"]}},
     supports_credentials=True,
 )
 
-app.register_blueprint(wiki_bp)
-app.register_blueprint(comments_bp)
-app.register_blueprint(health_bp)
+app.register_blueprint(wiki_bp, url_prefix="/api")
+app.register_blueprint(comments_bp, url_prefix="/api")
+app.register_blueprint(health_bp, url_prefix="/api")
 
 init_auth_routes(app)
 

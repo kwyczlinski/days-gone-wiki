@@ -5,7 +5,7 @@ from flask import request, jsonify, current_app, make_response
 from jwt import PyJWKClient, decode
 
 AUTH_ISSUER = os.getenv("AUTHENTIK_ISSUER")
-AUTH_BASE_INTERNAL = os.getenv("AUTHENTIK_INTERNAL_URL", "http://wiki-auth-server:9000")
+AUTH_BASE_INTERNAL = os.getenv("AUTHENTIK_INTERNAL_URL")
 CLIENT_ID = os.getenv("AUTHENTIK_CLIENT_ID")
 CLIENT_SECRET = os.getenv("AUTHENTIK_CLIENT_SECRET")
 
