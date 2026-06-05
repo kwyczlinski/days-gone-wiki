@@ -22,9 +22,8 @@ export const Comment = ({
 
   const canEdit = useMemo(
     () =>
-      userCtx.isAuthenticated &&
-      userCtx.user.userId &&
-      (userCtx.user.userId === user_id || userCtx.user.roles.includes("days-gone-moderator")),
+      userCtx.userId &&
+      (userCtx.userId === user_id || userCtx.rank === "admin"),
     [userCtx, user_id]
   );
 
@@ -95,7 +94,7 @@ export const Comment = ({
   return (
     <div>
       <div>
-        <span style={{padding: "0.2rem"}}>{username}</span>
+        <span>{username}</span>
         <span>
           {new Date(posted).toLocaleString()}
           {edited && <span> (edited)</span>}

@@ -1,7 +1,9 @@
 import { createContext, useState, useEffect, useMemo, useCallback, useContext } from "react";
 import { toast } from "react-toastify";
-import { generateRandomString, base64UrlEncode, sha256, createCodeChallenge } from "../utils/auth/pkce"
 
+// =====================================================================
+// AUTHENTIK CONFIG 
+// =====================================================================
 const AUTHENTIK_PUBLIC_URL = import.meta.env.VITE_AUTHENTIK_PUBLIC_URL;
 const CLIENT_ID = import.meta.env.VITE_AUTHENTIK_CLIENT_ID;
 const REDIRECT_URI = window.location.origin;
@@ -15,6 +17,7 @@ export function UserProvider({ children }) {
 
   const fetchUser = useCallback(async () => {
     try {
+      // Requests with credentials automatically attach HttpOnly session cookies
       const res = await fetch("/api/me", {
         credentials: "include",
       });
@@ -26,8 +29,9 @@ export function UserProvider({ children }) {
 
       const data = await res.json();
 
+      // Maps username, id, and groups/roles from your backend payload
       setUser({
-        userId: data.user_id || data.sub,
+        userId: data.user_id || data.sub, // Fallback depending on your backend key
         username: data.username || data.preferred_username,
         email: data.email,
         roles: data.roles || data.groups || [], 
@@ -43,26 +47,26 @@ export function UserProvider({ children }) {
     const handleAuthOrFetch = async () => {
       setIsLoading(true);
       
+      // Check if we just got redirected back from Authentik with a code
       const urlParams = new URLSearchParams(window.location.search);
       const code = urlParams.get("code");
-      const codeVerifier = sessionStorage.getItem("pkce_code_verifier");
-      // const codeVerifier = "thatIsNotAValidCodeVerifierForTestingIfItReallyUsesIt"
 
-      if (code && codeVerifier) {
+      if (code) {
         try {
+          // Send the code to your backend so it can swap it for access tokens/cookies
           const exchangeRes = await fetch("/api/auth/callback", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ code, redirect_uri: REDIRECT_URI, code_verifier: codeVerifier }),
+            body: JSON.stringify({ code, redirect_uri: REDIRECT_URI }),
           });
 
           if (!exchangeRes.ok) {
             throw new Error("Failed to exchange authorization code");
           }
 
-          sessionStorage.removeItem("pkce_code_verifier");
+          // Clean up the URL query params so the user doesn't see '?code=...'
           window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
-
+          
           toast.success("Successfully logged in!");
         } catch (err) {
           console.error("OAuth callback error:", err);
@@ -70,6 +74,7 @@ export function UserProvider({ children }) {
         }
       }
 
+      // No matter what (fresh load OR just finished exchanging code), fetch the user profile
       await fetchUser();
       setIsLoading(false);
     };
@@ -78,43 +83,45 @@ export function UserProvider({ children }) {
   }, [fetchUser]);
 
 
-  const login = useCallback(async () => {
-
-    const codeVerifier = generateRandomString(64);
-    sessionStorage.setItem("pkce_code_verifier", codeVerifier);
-
-    const codeChallenge = await createCodeChallenge(codeVerifier);
+  const login = useCallback(() => {
+    if (!CLIENT_ID || !AUTHENTIK_PUBLIC_URL) {
+      console.error("Missing Authentik environment variables!");
+      toast.error("Auth configuration error");
+      return;
+    }
 
     const params = new URLSearchParams({
       client_id: CLIENT_ID,
-      response_type: "code",
-      scope: "openid profile email groups",
+      response_type: "code", 
+      scope: "openid profile email groups", // Added 'groups' to scope so Authentik sends roles
       redirect_uri: REDIRECT_URI,
-      code_challenge: codeChallenge,
-      code_challenge_method: "S256",
     });
 
     const targetUrl = `${AUTHENTIK_PUBLIC_URL}/application/o/authorize/?${params.toString()}`;
     window.location.href = targetUrl;
   }, []);
 
+
   const logout = useCallback(async () => {
     try {
+      // 1. Informujemy nasz backend, aby skasował ciasteczko access_token
       await fetch("/api/auth/logout", { method: "POST" });
     } catch (err) {
       console.error("Backend logout failed", err);
     }
 
+    // 2. Czyścimy stan lokalny w React
     setUser(null);
     toast.info("Logging out from SSO...");
 
+    // 3. PRZEKIEROWANIE DO AUTHENTIKA: To zabije sesję w panelu Authentika.
+    // Parametr 'post_logout_redirect_uri' mówi Authentikowi, gdzie ma odesłać użytkownika PO wylogowaniu.
     const endSessionUrl = `${AUTHENTIK_PUBLIC_URL}/application/o/days-gone-wiki/end-session/`;
     const params = new URLSearchParams({
-      post_logout_redirect_uri: window.location.origin
+      post_logout_redirect_uri: window.location.origin // czyli https://localhost:5173
     });
 
     window.location.href = `${endSessionUrl}?${params.toString()}`;
-    // window.location.href = REDIRECT_URI;
   }, []);
 
   const isAuthenticated = useMemo(() => !!user, [user]);

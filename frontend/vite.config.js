@@ -17,7 +17,7 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        target: "https://wiki-api:5000",
+        target: "https://wiki-api:5000", // Wewnątrz sieci Dockera używaj nazwy serwisu kontenera zamiast localhost
         changeOrigin: true,
         secure: false,
       },
