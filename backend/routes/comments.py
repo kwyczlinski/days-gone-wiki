@@ -1,7 +1,9 @@
+import json
 from flask import Blueprint, request, jsonify, current_app
 from psycopg2.extras import RealDictCursor
-from database import get_db_conn
 from auth import require_auth
+from database import db_conn
+from redis_conn import cache
 
 comments_bp = Blueprint("comments", __name__)
 
@@ -20,11 +22,15 @@ def add_comment(current_user):
 
     current_app.logger.info(f"Creating comment at /{category}/{item_id}")
     try:
-        with get_db_conn() as conn:
+        with db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("call add_comment(%s, %s, %s, %s, %s)", (user_id, username, content, category, item_id))
                 conn.commit()
+
+        cache.delete(f"comments:{category}:{item_id}")
+
         return jsonify({"message": "Added comment successfully"}), 200
+    
     except Exception as err:
         current_app.logger.error(f"Adding comment failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
@@ -33,18 +39,28 @@ def add_comment(current_user):
 def get_comments():
     category = request.args.get("category")
     item_id = request.args.get("itemId")
+
     if not category or not item_id:
         return jsonify({"error": "Missing category or id"}), 400
-    
+
+    cache_key = f"comments:{category}:{item_id}"
+
     try:
-        with get_db_conn() as conn:
+        cached = cache.get(cache_key)
+        if cached:
+            return jsonify(json.loads(cached)), 200
+
+        with db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("select * from get_comments(%s, %s)", (category, item_id))
                 result = cur.fetchone()
-                
-                if result and "get_comments" in result:
-                    return jsonify(result["get_comments"]), 200
-                return jsonify([]), 200
+
+        comments = result["get_comments"] if result and "get_comments" in result else []
+
+        cache.setex(cache_key, 30, json.dumps(comments, default=str))
+
+        return jsonify(comments), 200
+
     except Exception as err:
         current_app.logger.error(f"Fetching comments failed: {str(err)}")
         return jsonify({"error": "Internal server error"}), 500
@@ -58,7 +74,7 @@ def update_comment(current_user, comment_id):
         return jsonify({"error": "Content is required"}), 400
 
     try:
-        with get_db_conn() as conn:
+        with db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("select * from get_comment(%s)", (comment_id,))
                 result = cur.fetchone()
@@ -73,6 +89,8 @@ def update_comment(current_user, comment_id):
                 cur.execute("call update_comment(%s, %s, %s)", (comment_id, content, owner_id))
                 conn.commit()
 
+        cache.delete(f"comments:{result['category']}:{result['item_id']}")
+
         current_app.logger.info(f"Updated comment {comment_id}")
         return jsonify({"message": "Updated successfully"}), 200
     except Exception as err:
@@ -83,7 +101,7 @@ def update_comment(current_user, comment_id):
 @require_auth
 def delete_comment(current_user, comment_id):
     try:
-        with get_db_conn() as conn:
+        with db_conn() as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("select * from get_comment(%s)", (comment_id,))
                 result = cur.fetchone()
@@ -97,6 +115,8 @@ def delete_comment(current_user, comment_id):
 
                 cur.execute("call delete_comment(%s, %s)", (comment_id, owner_id))
                 conn.commit()
+
+        cache.delete(f"comments:{result['category']}:{result['item_id']}")
 
         return jsonify({"message": "Deleted successfully"}), 200
     except Exception as err:
