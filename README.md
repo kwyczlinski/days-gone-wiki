@@ -2,7 +2,7 @@
 
 ## By Krzysztof Wyczlinski
 
-## final project for class Web Technologies
+## final project for class Protokoły Sieci Web
 
 ### Frontend
 
@@ -17,23 +17,11 @@
 - **Database:** PostgreSQL
 - **Containerization:** Docker & Docker Compose
 
-### Auth
-
-- **Provider:** Authentik
-
 ### Personal projects were used and publicly accessible templates
 
-- **Base frontend & backend:** taken from Web Protocols class
 - **PLpgSQL:** taken from Database class
-- **OAuth2.0:** integrated as a part of Web Applications Security class
 
-### how to run
+### Dodanie tls
 
-#### Adding tls for localhost
-
-- Install mkcert.
-- mkdir certs && mkcert -install && mkcert -cert-file certs/cert.pem -key-file certs/key.pem localhost 127.0.0.1 <MACHINE_IP>.
-
-#### Fill in .env templates
-
-#### Start with docker compose
+- Zainstaluj mkcert.
+- mkdir certs && mkcert -install && mkcert -cert-file certs/cert.pem -key-file certs/key.pem localhost 127.0.0.1 <TWOJE_IP>.
