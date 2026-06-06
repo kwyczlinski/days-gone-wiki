@@ -1,5 +1,4 @@
 import { useUserCtx } from "../../contexts/UserContext";
-import { Link } from "react-router-dom";
 import styles from "./ProfileButton.module.css";
 
 export function ProfileButton() {
