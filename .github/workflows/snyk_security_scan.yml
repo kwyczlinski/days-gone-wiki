@@ -38,8 +38,6 @@ jobs:
       - name: Snyk Node scan
         continue-on-error: true
         working-directory: ./frontend
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: snyk test --file=package.json
 
       - name: Setup Python
@@ -54,16 +52,16 @@ jobs:
 
       - name: Snyk Python scan
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           snyk test --file=backend/requirements.txt --package-manager=pip --severity-threshold=high
 
-      - name: Snyk IaC scan
+      - name: Snyk IaC scan (docker-compose)
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk iac test --file=docker-compose.yml # add k8s etc. later
+        run: snyk iac test docker-compose.yml
+
+      - name: Snyk IaC scan (k8s)
+        continue-on-error: true
+        run: snyk iac test k8s/
 
   container-scan:
     runs-on: ubuntu-latest
