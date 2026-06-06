@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useUserCtx } from "../../contexts/UserContext";
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -48,6 +48,7 @@ export const CommentInput = ({ category, itemId, onCommentAdded }) => {
       setContent("");
       if (onCommentAdded) onCommentAdded();
     } catch (err) {
+      console.log(err);
       setError("Error submitting comment.");
     }
     setSubmitting(false);

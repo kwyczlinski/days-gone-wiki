@@ -13,14 +13,9 @@ export function ProfileButton() {
 
       <div className={styles.dropdown}>
         {isAuthenticated ? (
-          <>
-            <div className={styles.dropdownItem}>
-              <Link to="/profile">Edit profile</Link>
-            </div>
             <button onClick={logout} className={styles.dropdownItem}>
               Log out
             </button>
-          </>
         ) : (
           <button onClick={login} className={styles.dropdownItem}>
             Log in

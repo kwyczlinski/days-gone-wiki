@@ -175,6 +175,7 @@ export const DetailsPage = () => {
         const result = await res.json();
         setData(result);
       } catch (err) {
+        console.log(err);
         toast.error("An error occured, please refresh");
         setData(null);
       } finally {
