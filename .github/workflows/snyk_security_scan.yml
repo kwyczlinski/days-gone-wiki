@@ -1,4 +1,4 @@
-name: Snyk Security Scan
+name: Security Scan
 
 on:
   push:
@@ -10,41 +10,90 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
-  security:
+  dependency-and-iac-scan:
     runs-on: ubuntu-latest
+
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # --- Layer 1: Python at backend ---
-      - name: Run Snyk Python scan
-        uses: snyk/actions/python@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          command: test
-          args: --file=backend/requirements.txt --package-manager=pip
+          node-version: "22"
 
-      # --- Layer 2: Node.js at frontend ---
-      - name: Run Snyk Node.js scan
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --file=frontend/package.json
+      - name: Install Snyk CLI
+        run: npm install -g snyk
 
-      # --- Layer 3: IaC at docker compose ---
-      - name: Run Snyk IaC scan
-        uses: snyk/actions/iac@master
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Snyk Node scan
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        working-directory: ./frontend
+        run: snyk test --file=package.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          command: test
-          args: docker-compose.yml
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-dev.txt
+
+      - name: Snyk Python scan
+        continue-on-error: true
+        run: |
+          snyk test --file=backend/requirements.txt --package-manager=pip --severity-threshold=high
+
+      - name: Snyk IaC scan (docker-compose)
+        continue-on-error: true
+        run: snyk iac test docker-compose.yml
+
+      - name: Snyk IaC scan (k8s)
+        continue-on-error: true
+        run: snyk iac test k8s/
+
+  container-scan:
+    runs-on: ubuntu-latest
+
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+      - name: Build Backend Image
+        run: |
+          docker build -t wiki-backend-security ./backend
+
+      - name: Build Frontend Image
+        run: |
+          docker build -t wiki-frontend-security ./frontend
+
+      - name: Snyk scan backend container
+        continue-on-error: true
+        run: |
+          snyk container test wiki-backend-security
+
+      - name: Snyk scan frontend container
+        continue-on-error: true
+        run: |
+          snyk container test wiki-frontend-security

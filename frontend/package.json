@@ -18,7 +18,6 @@
     "react-hook-form": "^7.71.1",
     "react-router-dom": "^7.12.0",
     "react-toastify": "^11.0.5",
-    "snyk": "^1.1305.0",
     "yup": "^1.7.1"
   },
   "devDependencies": {
