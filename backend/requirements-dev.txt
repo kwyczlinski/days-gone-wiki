@@ -5,4 +5,3 @@ flake8
 black
 
 mypy
-snyk
