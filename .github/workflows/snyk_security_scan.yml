@@ -59,11 +59,11 @@ jobs:
         run: |
           snyk test --file=backend/requirements.txt --package-manager=pip --severity-threshold=high
 
-      - name: Snyk IaC scan (docker-compose)
+      - name: Snyk IaC scan
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk iac test docker-compose.yml
+        run: snyk iac test .
 
   container-scan:
     runs-on: ubuntu-latest
