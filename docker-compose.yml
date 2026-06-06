@@ -44,7 +44,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - internal-net # Brak sekcji ports - baza jest ukryta przed hostem!
+      - internal-net
     deploy:
       resources:
         limits:
@@ -92,7 +92,6 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/logs:/app/logs
-      # - ./backend:/app # Opcjonalny bind mount kodu źródłowego na potrzeby deweloperskie (zgodnie z przeznaczeniem)
     stop_grace_period: 15s
     networks:
       - internal-net
