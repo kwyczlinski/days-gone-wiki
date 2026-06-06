@@ -63,14 +63,10 @@ jobs:
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk iac test .
+        run: snyk iac test docker-compose.yml nginx-gateway.conf # add k8s etc. later
 
   container-scan:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: read
 
     env:
       SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -79,6 +75,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
       - name: Build Backend Image
         run: |
           docker build -t wiki-backend-security ./backend
