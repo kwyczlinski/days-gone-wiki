@@ -1,4 +1,4 @@
-name: Snyk Security Scan
+name: Security Scan
 
 on:
   push:
@@ -10,17 +10,17 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 jobs:
-  security:
+  dependency-and-iac-scan:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # --- Layer 1: Python at backend ---
-      - name: Run Snyk Python scan
+      - name: Snyk Python Scan
         uses: snyk/actions/python@master
         continue-on-error: true
         env:
@@ -29,8 +29,7 @@ jobs:
           command: test
           args: --file=backend/requirements.txt --package-manager=pip
 
-      # --- Layer 2: Node.js at frontend ---
-      - name: Run Snyk Node.js scan
+      - name: Snyk Node.js Scan
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -39,12 +38,46 @@ jobs:
           command: test
           args: --file=frontend/package.json
 
-      # --- Layer 3: IaC at docker compose ---
-      - name: Run Snyk IaC scan
+      - name: Snyk IaC Scan
         uses: snyk/actions/iac@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
-          args: docker-compose.yml
+          args: .
+
+  container-scan:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Backend Image
+        run: |
+          docker build -t wiki-backend-security ./backend
+
+      - name: Build Frontend Image
+        run: |
+          docker build -t wiki-frontend-security ./frontend
+
+      - name: Scan Backend Container
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: wiki-backend-security
+
+      - name: Scan Frontend Container
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: wiki-frontend-security

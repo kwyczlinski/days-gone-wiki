@@ -2,42 +2,47 @@ name: Continuous Integration (CI)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+
+concurrency:
+  group: production-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Build Backend Tester Stage
-        run: |
-          docker build --target tester -t wiki-backend-test ./backend
+        run: docker build --target tester -t wiki-backend-test ./backend
 
-      - name: Run Backend Tests (Pytest)
-        run: |
-          docker run --rm wiki-backend-test
+      - name: Run Backend Tests
+        run: docker run --rm wiki-backend-test
 
   frontend-test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Build Frontend Tester Stage
-        run: |
-          docker build --target tester -t wiki-frontend-test ./frontend
+        run: docker build --target tester -t wiki-frontend-test ./frontend
 
-      - name: Run Frontend Lint / Tests
-        run: |
-          docker run --rm wiki-frontend-test
+      - name: Run Frontend Tests
+        run: docker run --rm wiki-frontend-test
 
   build-and-push-production:
-    needs: [backend-test, frontend-test]
+    if: github.event_name == 'push'
+    needs: ["backend-test", "frontend-test"]
+
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
@@ -45,6 +50,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -54,17 +62,25 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and Push Backend Production Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/wiki-backend:latest
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/wiki-backend:latest
+            ghcr.io/${{ github.repository_owner }}/wiki-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build and Push Frontend Production Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ghcr.io/${{ github.repository }}/wiki-frontend:latest
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/wiki-frontend:latest
+            ghcr.io/${{ github.repository_owner }}/wiki-frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
