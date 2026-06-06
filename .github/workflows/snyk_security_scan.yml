@@ -23,6 +23,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Snyk Node scan
+        continue-on-error: true
+        working-directory: ./frontend
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --file=package.json
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -39,22 +58,6 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
           snyk test --file=backend/requirements.txt --package-manager=pip --severity-threshold=high
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm ci
-
-      - name: Snyk Node scan
-        continue-on-error: true
-        working-directory: ./frontend
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: snyk test --file=package.json
 
       - name: Snyk IaC scan (docker-compose)
         continue-on-error: true
