@@ -16,36 +16,51 @@ jobs:
   dependency-and-iac-scan:
     runs-on: ubuntu-latest
 
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Snyk Python Scan
-        uses: snyk/actions/python@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          command: test
-          args: --file=backend/requirements.txt --package-manager=pip
+          python-version: "3.12"
 
-      - name: Snyk Node.js Scan
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --file=frontend/package.json
+      - name: Install backend dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-dev.txt
 
-      - name: Snyk IaC Scan
-        uses: snyk/actions/iac@master
+      - name: Snyk Python scan
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk test --file=backend/requirements.txt --package-manager=pip --severity-threshold=high
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          command: test
-          args: .
+          node-version: "22"
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Snyk Node scan
+        continue-on-error: true
+        working-directory: ./frontend
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk test --file=package.json
+
+      - name: Snyk IaC scan (docker-compose)
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: snyk iac test docker-compose.yml
 
   container-scan:
     runs-on: ubuntu-latest
@@ -53,6 +68,9 @@ jobs:
     permissions:
       contents: read
       packages: read
+
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     steps:
       - name: Checkout code
@@ -66,18 +84,12 @@ jobs:
         run: |
           docker build -t wiki-frontend-security ./frontend
 
-      - name: Scan Backend Container
-        uses: snyk/actions/docker@master
+      - name: Snyk scan backend container
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          image: wiki-backend-security
+        run: |
+          snyk container test wiki-backend-security
 
-      - name: Scan Frontend Container
-        uses: snyk/actions/docker@master
+      - name: Snyk scan frontend container
         continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          image: wiki-frontend-security
+        run: |
+          snyk container test wiki-frontend-security
