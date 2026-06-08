@@ -4,7 +4,7 @@ import { CommentsBox } from "../../../components/comments/CommentsBox";
 import { toast } from "react-toastify";
 import { Navbar } from "../../../components/navbar";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = window._env_?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
 const WikiSection = ({ title, items, type }) => {
   if (!items || items.length === 0) return null;
