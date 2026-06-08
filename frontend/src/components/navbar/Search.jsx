@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dropdown } from "./SearchDropdown";
 import styles from "./Search.module.css";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = window._env_?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
 export const Search = () => {
   const [data, setData] = useState(null);

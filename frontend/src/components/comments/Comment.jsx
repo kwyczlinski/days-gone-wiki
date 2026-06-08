@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useUserCtx } from "../../contexts/UserContext";
 import { toast } from "react-toastify";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = window._env_?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
 export const Comment = ({
   comment_id,

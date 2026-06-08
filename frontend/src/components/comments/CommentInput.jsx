@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useUserCtx } from "../../contexts/UserContext";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = window._env_?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
 export const CommentInput = ({ category, itemId, onCommentAdded }) => {
   const userCtx = useUserCtx();

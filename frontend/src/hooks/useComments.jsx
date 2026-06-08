@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "react-toastify";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = window._env_?.VITE_API_URL || import.meta.env.VITE_API_URL;
 
 export const useComments = (category, itemId) => {
   const [comments, setComments] = useState([]);
