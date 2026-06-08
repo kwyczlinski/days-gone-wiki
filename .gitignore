@@ -50,5 +50,8 @@ frontend/.vite/
 !.vscode/extensions.json
 .idea/
 
+# k8s
+k8s/**/secrets-config.local.yaml
+
 # Personal
 additionals/

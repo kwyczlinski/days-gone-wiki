@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wiki-redis
+  namespace: wiki-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wiki-redis
+  template:
+    metadata:
+      labels:
+        app: wiki-redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:alpine
+        resources:
+          limits:
+            cpu: "0.5"
+            memory: 256Mi
+          requests:
+            cpu: "100m"
+            memory: 128Mi
+        ports:
+        - containerPort: 6379
+          name: redisport
+        readinessProbe:
+          exec:
+            command: ["redis-cli", "ping"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wiki-redis-service
+  namespace: wiki-app
+spec:
+  ports:
+  - port: 6379
+  selector:
+    app: wiki-redis
