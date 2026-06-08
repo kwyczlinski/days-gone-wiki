@@ -1,4 +1,4 @@
-name: Continuous Integration (CI)
+name: Continuous Integration Continuous Development (CI/CD)
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
       - name: Run Frontend Tests
         run: docker run --rm wiki-frontend-test
 
-  build-and-push-production:
+  build-and-push:
     if: github.event_name == 'push'
     needs: ["backend-test", "frontend-test"]
 
@@ -61,7 +61,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and Push Backend Production Image
+      - name: Build and Push Backend Image
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -73,7 +73,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and Push Frontend Production Image
+      - name: Build and Push Frontend Image
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
@@ -84,3 +84,22 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/wiki-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Set up Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Update Kubernetes Images with new SHA Tag
+        run: |
+          cd k8s/overlays/prod
+          kustomize edit set image ghcr.io/${{ github.repository_owner }}/wiki-backend=ghcr.io/${{ github.repository_owner }}/wiki-backend:${{ github.sha }}
+          kustomize edit set image ghcr.io/${{ github.repository_owner }}/wiki-frontend=ghcr.io/${{ github.repository_owner }}/wiki-frontend:${{ github.sha }}
+
+      - name: Validate manifests
+        run: |
+          kubectl kustomize k8s/overlays/prod
+      
+      # - name: Deploy
+      #   run: |
+      #     echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+      #     export KUBECONFIG=./kubeconfig
+      #     kubectl apply -k overlays/prod
