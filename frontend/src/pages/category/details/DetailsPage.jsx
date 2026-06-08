@@ -4,7 +4,7 @@ import { CommentsBox } from "../../../components/comments/CommentsBox";
 import { toast } from "react-toastify";
 import { Navbar } from "../../../components/navbar";
 
-const VITE_API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
 const WikiSection = ({ title, items, type }) => {
   if (!items || items.length === 0) return null;
@@ -170,7 +170,7 @@ export const DetailsPage = () => {
     const handleShowDetails = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`${VITE_API_URL}/${category}/${id}`);
+        const res = await fetch(`${API_URL}/${category}/${id}`);
         if (!res.ok) throw new Error("Not found");
         const result = await res.json();
         setData(result);

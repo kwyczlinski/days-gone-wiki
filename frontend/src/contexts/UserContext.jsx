@@ -2,6 +2,7 @@ import { createContext, useState, useEffect, useMemo, useCallback, useContext } 
 import { toast } from "react-toastify";
 import { generateRandomString, createCodeChallenge } from "../utils/auth/pkce"
 
+const API_URL = import.meta.env.VITE_API_URL;
 const AUTHENTIK_PUBLIC_URL = import.meta.env.VITE_AUTHENTIK_PUBLIC_URL;
 const CLIENT_ID = import.meta.env.VITE_AUTHENTIK_CLIENT_ID;
 const REDIRECT_URI = window.location.origin;
@@ -15,7 +16,7 @@ export function UserProvider({ children }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/me", {
+      const res = await fetch(`${API_URL}/me`, {
         credentials: "include",
       });
 
@@ -50,7 +51,7 @@ export function UserProvider({ children }) {
 
       if (code && codeVerifier) {
         try {
-          const exchangeRes = await fetch("/api/auth/callback", {
+          const exchangeRes = await fetch(`${API_URL}/auth/callback`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ code, redirect_uri: REDIRECT_URI, code_verifier: codeVerifier }),
@@ -100,7 +101,7 @@ export function UserProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch(`${API_URL}/auth/logout`, { method: "POST" });
     } catch (err) {
       console.error("Backend logout failed", err);
     }
