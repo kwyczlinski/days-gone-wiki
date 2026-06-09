@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: wiki-db
+  namespace: wiki-app
+spec:
+  serviceName: "wiki-db-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wiki-db
+  template:
+    metadata:
+      labels:
+        app: wiki-db
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: wiki-config
+              key: DB_USER
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: wiki-config
+              key: DB_NAME
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: wiki-secrets
+              key: DB_PASSWORD
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        resources:
+          limits:
+            cpu: "1.0"
+            memory: 512Mi
+          requests:
+            cpu: "200m"
+            memory: 256Mi
+        ports:
+        - containerPort: 5432
+          name: dbport
+        readinessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres", "-d", "wiki"]
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        volumeMounts:
+        - name: db-data
+          mountPath: /var/lib/postgresql/data
+        # MAPOWANIE: Tutaj wskazujemy folder wewnątrz kontenera
+        - name: init-scripts-volume
+          mountPath: /docker-entrypoint-initdb.d
+      
+      volumes:
+      # Definiujemy wolumen wskazujący na wygenerowany przez Kustomize ConfigMap
+      - name: init-scripts-volume
+        configMap:
+          name: postgres-init-scripts
+
+  volumeClaimTemplates:
+  - metadata:
+      name: db-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wiki-db-service
+  namespace: wiki-app
+spec:
+  ports:
+  - port: 5432
+  selector:
+    app: wiki-db
