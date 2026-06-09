@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wiki-db-ingress
+  namespace: wiki-app
+spec:
+  podSelector:
+    matchLabels:
+      app: wiki-db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: wiki-backend
+        - podSelector:
+            matchLabels:
+              app: authentik-server
+        - podSelector:
+            matchLabels:
+              app: authentik-worker
+      ports:
+        - protocol: TCP
+          port: 5432

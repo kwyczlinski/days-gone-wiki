@@ -5,10 +5,12 @@ resources:
   - namespace.yaml
   - postgres.yaml
   - redis.yaml
+  - authentik.yaml
   - backend.yaml
   - frontend.yaml
-  - authentik.yaml
   - ingress.yaml
+  - networkpolicy-db.yaml
+  - networkpolicy-redis.yaml
 
 configMapGenerator:
   - name: postgres-init-scripts

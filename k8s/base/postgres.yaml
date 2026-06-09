@@ -53,12 +53,10 @@ spec:
         volumeMounts:
         - name: db-data
           mountPath: /var/lib/postgresql/data
-        # MAPOWANIE: Tutaj wskazujemy folder wewnątrz kontenera
         - name: init-scripts-volume
           mountPath: /docker-entrypoint-initdb.d
       
       volumes:
-      # Definiujemy wolumen wskazujący na wygenerowany przez Kustomize ConfigMap
       - name: init-scripts-volume
         configMap:
           name: postgres-init-scripts
