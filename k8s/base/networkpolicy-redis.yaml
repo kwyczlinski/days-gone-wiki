@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: wiki-redis-ingress
+  namespace: wiki-app
+spec:
+  podSelector:
+    matchLabels:
+      app: wiki-redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: wiki-backend
+      ports:
+        - protocol: TCP
+          port: 6379
