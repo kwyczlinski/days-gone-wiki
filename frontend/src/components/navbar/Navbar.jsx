@@ -14,7 +14,7 @@ export const Navbar = () => {
       
       {!isLoading && user?.username && (
         <span className={styles.username}>
-          Witaj, {user.username}
+          Welcome, {user.username}
         </span>
       )}
       
