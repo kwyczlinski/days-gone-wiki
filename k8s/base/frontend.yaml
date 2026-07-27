@@ -13,11 +13,9 @@ spec:
       labels:
         app: wiki-frontend
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       containers:
       - name: frontend
-        image: wiki-frontend
+        image: ghcr.io/kwyczlinski/wiki-frontend:latest
         resources:
           limits:
             cpu: "0.5"
