@@ -3,6 +3,8 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - networkpolicy-db.yaml
+  - networkpolicy-redis.yaml
 
 images:
   - name: wiki-backend

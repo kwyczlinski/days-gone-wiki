@@ -9,8 +9,6 @@ resources:
   - backend.yaml
   - frontend.yaml
   - ingress.yaml
-  - networkpolicy-db.yaml
-  - networkpolicy-redis.yaml
 
 configMapGenerator:
   - name: postgres-init-scripts

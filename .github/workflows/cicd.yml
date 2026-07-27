@@ -79,6 +79,10 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL }}
+            VITE_AUTHENTIK_PUBLIC_URL=${{ vars.VITE_AUTHENTIK_PUBLIC_URL }}
+            VITE_AUTHENTIK_CLIENT_ID=${{ vars.VITE_AUTHENTIK_CLIENT_ID }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/wiki-frontend:latest
             ghcr.io/${{ github.repository_owner }}/wiki-frontend:${{ github.sha }}
@@ -91,8 +95,8 @@ jobs:
       - name: Update Kubernetes Images with new SHA Tag
         run: |
           cd k8s/overlays/prod
-          kustomize edit set image ghcr.io/${{ github.repository_owner }}/wiki-backend=ghcr.io/${{ github.repository_owner }}/wiki-backend:${{ github.sha }}
-          kustomize edit set image ghcr.io/${{ github.repository_owner }}/wiki-frontend=ghcr.io/${{ github.repository_owner }}/wiki-frontend:${{ github.sha }}
+          kustomize edit set image wiki-backend=ghcr.io/${{ github.repository_owner }}/wiki-backend:${{ github.sha }}
+          kustomize edit set image wiki-frontend=ghcr.io/${{ github.repository_owner }}/wiki-frontend:${{ github.sha }}
 
       - name: Validate manifests
         run: |

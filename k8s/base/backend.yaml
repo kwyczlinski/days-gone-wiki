@@ -18,12 +18,10 @@ spec:
       labels:
         app: wiki-backend
     spec:
-      imagePullSecrets:
-        - name: ghcr-secret
       terminationGracePeriodSeconds: 15
       containers:
       - name: backend
-        image: wiki-backend
+        image: ghcr.io/kwyczlinski/wiki-backend:latest
         env:
         - name: DB_HOST
           valueFrom: { configMapKeyRef: { name: wiki-config, key: DB_HOST } }
