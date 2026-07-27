@@ -32,7 +32,7 @@
 ## Frontend
 
 - **Framework:** React 19 (Vite)
-- **Runtime config injection:** `frontend/entrypoint.sh` generates `env-config.js` at container startup (`window._env_`)
+- **Build time config injection:** Environment variables are injected during Docker build time via GitHub Actions workflow build args
 - **Compiler:** @vitejs/plugin-react (Babel-based)
 - **Routing:** React Router DOM v6
 - **Styling:** CSS Modules
@@ -111,7 +111,7 @@ Add hosts entry:
 
 Secrets are generated using Kustomize `secretGenerator` and are not tracked in Git.
 
-Create `.env` files based on `.env.template`.
+Create `.env` file in ./ or k8s/base/ based on `.env.example`, depending on deployment option.
 
 ---
 
@@ -148,17 +148,7 @@ kubectl create secret tls wiki-tls-secret \
   -n wiki-app
 ```
 
-### Step 3: GitHub Container Registry credentials (optional if not public)
-
-```bash
-kubectl create secret docker-registry ghcr-secret \
-  --docker-server=ghcr.io \
-  --docker-username=<YOUR_GITHUB_USERNAME> \
-  --docker-password=<YOUR_GITHUB_PAT> \
-  -n wiki-app
-```
-
-### Step 4: Deploy with Kustomize
+### Step 3: Deploy with Kustomize
 
 Development:
 
@@ -174,7 +164,7 @@ kubectl apply -k k8s/overlays/prod/
 
 ---
 
-### Step 5: Database migration / restore (if needed)
+### Step 4: Database migration / restore (if needed)
 
 Reset Authentik DB:
 
