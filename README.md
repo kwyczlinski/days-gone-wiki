@@ -2,12 +2,12 @@
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-Frontend-646CFF?logo=vite&logoColor=white)
-![Flask](https://img.shields.io/badge/Backend-Flask-000000?logo=flask)
+![Flask](https://img.shields.io/badge/Flask-Backend-000000?logo=flask)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-316192?logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker)
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Orchestration-326CE5?logo=kubernetes)
-![OAuth2](https://img.shields.io/badge/Auth-OAuth2.0%2FOpenID%20Connect-3C3C3C)
+![OAuth2](https://img.shields.io/badge/OAuth2.0%2FOpenID%20Connect-Auth-3C3C3C)
 
 ### By Krzysztof Wyczlinski
 
