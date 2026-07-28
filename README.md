@@ -166,17 +166,36 @@ kubectl apply -k k8s/overlays/prod/
 
 ### Step 4: Database migration / restore (if needed)
 
+Create Authentik Backup:
+
+```bash
+docker exec -t wiki-db \
+  pg_dump -U postgres  -d authentik \
+  > authentik_backup_$(date +%F).sql
+
+kubectl exec -n wiki-app -t deployment/wiki-db -- \
+  pg_dump -U postgres -d authentik \
+  > authentik_backup_$(date +%F).sql
+```
+
 Reset Authentik DB:
 
 ```bash
+docker exec -i wiki-db \
+  psql -U postgres -d authentik \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
 kubectl exec -i deployment/wiki-db -n wiki-app -- \
-psql -U postgres -d authentik \
--c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+  psql -U postgres -d authentik \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 ```
 
 Restore backup:
 
 ```bash
+cat authentik_backup.sql | docker exec -i wiki-db \
+  psql -U postgres -d authentik
+
 cat authentik_backup.sql | kubectl exec -i deployment/wiki-db -n wiki-app \
 -- psql -U postgres -d authentik
 ```
@@ -184,5 +203,7 @@ cat authentik_backup.sql | kubectl exec -i deployment/wiki-db -n wiki-app \
 Restart Authentik:
 
 ```bash
+docker compose restart authentik-server authentik-worker
+
 kubectl rollout restart deployment/authentik-server -n wiki-app
 ```
