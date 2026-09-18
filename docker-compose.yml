@@ -127,7 +127,7 @@ services:
         max-file: "3"
 
   authentik-server:
-    image: ghcr.io/goauthentik/server:latest
+    image: ghcr.io/goauthentik/server:2026.8.0
     container_name: authentik-server
     restart: unless-stopped
     command: server
@@ -161,7 +161,7 @@ services:
         max-file: "3"
 
   authentik-worker:
-    image: ghcr.io/goauthentik/server:latest
+    image: ghcr.io/goauthentik/server:2026.8.0
     container_name: authentik-worker
     restart: unless-stopped
     command: worker
